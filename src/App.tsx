@@ -22,6 +22,7 @@ import SignupPage from './pages/auth/SignupPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import ComingSoonPage from './pages/ComingSoonPage';
 import SupportPage from './pages/support/SupportPage';
+import Privacy from './pages/Privacy';
 
 // Admin Pages
 import AdminLoginPage from './pages/admin/AdminLoginPage';
@@ -85,6 +86,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/privacy" element={<Privacy />} />
 
         {/* Main App Routes */}
         <Route path="/" element={<Layout />}>
