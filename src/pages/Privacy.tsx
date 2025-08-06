@@ -1,7 +1,9 @@
-// src/components/Privacy.js (or wherever you keep components)
 import React from 'react';
+import { useAppSettingsStore } from '../store/appSettingsStore';
 
-const Privacy = () => {
+const Privacy: React.FC = () => {
+  const { footerEmail, footerCompanyName } = useAppSettingsStore();
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Privacy Policy</h1>
@@ -9,7 +11,7 @@ const Privacy = () => {
         {/* Your privacy policy content here */}
         <p><strong>Effective Date:</strong> 1st June, 2025</p>
 
-  <p>At <strong>Haaman General Merchandise Enterprise</strong>, your privacy is important to us. This policy explains how we collect, use, and protect your information.</p>
+  <p>At <strong>{footerCompanyName}</strong>, your privacy is important to us. This policy explains how we collect, use, and protect your information.</p>
 
   <h2>1. Information We Collect</h2>
   <ul>
@@ -32,7 +34,7 @@ const Privacy = () => {
   <p>We implement appropriate security measures to protect your data. However, no system is 100% secure.</p>
 
   <h2>5. Your Rights</h2>
-  <p>You may request access, correction, or deletion of your data by contacting us.</p>
+  <p>You may request access, correction, or deletion of your data by contacting us at {footerEmail}.</p>
       </div>
     </div>
   );

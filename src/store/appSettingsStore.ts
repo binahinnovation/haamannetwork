@@ -5,6 +5,10 @@ type AppSettingsState = {
   siteName: string;
   siteLogoUrl: string;
   appBaseUrl: string;
+  footerPhone: string;
+  footerEmail: string;
+  footerAddress: string;
+  footerCompanyName: string;
   isLoading: boolean;
   error: string | null;
   fetchSettings: () => Promise<void>;
@@ -14,6 +18,10 @@ export const useAppSettingsStore = create<AppSettingsState>((set) => ({
   siteName: 'Haaman Network', // Default fallback value
   siteLogoUrl: 'https://images.pexels.com/photos/5632402/pexels-photo-5632402.jpeg', // Default fallback value
   appBaseUrl: 'https://haamannetwork.com', // Default fallback value
+  footerPhone: '+234 907 599 2464', // Default fallback value
+  footerEmail: 'support@haamannetwork.com', // Default fallback value
+  footerAddress: 'Lagos, Nigeria', // Default fallback value
+  footerCompanyName: 'Haaman Network', // Default fallback value
   isLoading: false,
   error: null,
   
@@ -23,7 +31,7 @@ export const useAppSettingsStore = create<AppSettingsState>((set) => ({
       const { data, error } = await supabase
         .from('admin_settings')
         .select('key, value')
-        .in('key', ['site_name', 'site_logo_url', 'app_base_url']);
+        .in('key', ['site_name', 'site_logo_url', 'app_base_url', 'footer_phone', 'footer_email', 'footer_address', 'footer_company_name']);
 
       if (error) throw error;
 
@@ -36,6 +44,10 @@ export const useAppSettingsStore = create<AppSettingsState>((set) => ({
         siteName: settings.site_name || 'Haaman Network',
         siteLogoUrl: settings.site_logo_url || 'https://images.pexels.com/photos/5632402/pexels-photo-5632402.jpeg',
         appBaseUrl: settings.app_base_url || 'https://haamannetwork.com',
+        footerPhone: settings.footer_phone || '+234 907 599 2464',
+        footerEmail: settings.footer_email || 'support@haamannetwork.com',
+        footerAddress: settings.footer_address || 'Lagos, Nigeria',
+        footerCompanyName: settings.footer_company_name || 'Haaman Network',
         isLoading: false
       });
       

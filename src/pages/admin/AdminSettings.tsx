@@ -808,6 +808,29 @@ const AdminSettings: React.FC = () => {
                           </p>
                         )}
 
+                        {setting.key === 'footer_company_name' && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Company name displayed in the footer and legal documents
+                          </p>
+                        )}
+
+                        {setting.key === 'footer_email' && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Contact email address displayed in footer and support pages
+                          </p>
+                        )}
+
+                        {setting.key === 'footer_phone' && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Contact phone number displayed in footer
+                          </p>
+                        )}
+
+                        {setting.key === 'footer_address' && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Business address displayed in footer
+                          </p>
+                        )}
                         {setting.key === 'referral_reward_enabled' && (
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             Enable or disable the data reward for users who refer others

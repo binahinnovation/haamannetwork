@@ -11,7 +11,7 @@ import { supabase } from '../../lib/supabase';
 const FundWalletPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, refreshUserData } = useAuthStore();
-  const { siteName } = useAppSettingsStore();
+  const { siteName, footerEmail } = useAppSettingsStore();
   const [copied, setCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [fundingCharges, setFundingCharges] = useState({
@@ -406,7 +406,7 @@ const FundWalletPage: React.FC = () => {
                     Please contact our support team to arrange a manual wallet funding.
                   </p>
                   <p className="text-sm font-medium text-[#0F9D58] mt-2">
-                    support@example.com
+                    {footerEmail}
                   </p>
                 </div>
               </div>
@@ -423,7 +423,7 @@ const FundWalletPage: React.FC = () => {
             If you have any questions about funding your wallet, please contact our support team.
           </p>
           <p className="text-sm text-[#0F9D58] font-medium mt-1">
-            support@example.com
+            {footerEmail}
           </p>
         </div>
       </div>

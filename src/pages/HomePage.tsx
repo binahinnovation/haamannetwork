@@ -15,7 +15,7 @@ const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
   const { config: serviceConfig, fetchConfig } = useServiceConfigStore();
-  const { siteName, siteLogoUrl } = useAppSettingsStore();
+  const { siteName, siteLogoUrl, footerPhone, footerEmail, footerAddress, footerCompanyName } = useAppSettingsStore();
   const [bannerSettings, setBannerSettings] = useState({
     hero_banner_image: 'https://images.pexels.com/photos/4386321/pexels-photo-4386321.jpeg',
     hero_banner_image_alt: 'https://images.pexels.com/photos/4386321/pexels-photo-4386321.jpeg',
@@ -27,12 +27,6 @@ const HomePage: React.FC = () => {
     download_app_enabled: 'true',
   });
 
-  const [footerSettings, setFooterSettings] = useState({
-    footer_phone: '+234 907 599 2464',
-    footer_email: 'support@example.com',
-    footer_address: 'Lagos, Nigeria',
-    footer_company_name: siteName,
-  });
 
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -44,10 +38,7 @@ const HomePage: React.FC = () => {
       setFetchError(null);
       
       try {
-        await Promise.all([
-          fetchBannerSettings(),
-          fetchFooterSettings()
-        ]);
+        await fetchBannerSettings();
       } catch (error) {
         console.error('Error initializing settings:', error);
         setFetchError('Unable to load some settings. Using default values.');
@@ -104,47 +95,6 @@ const HomePage: React.FC = () => {
     }
   };
 
-  const fetchFooterSettings = async () => {
-    try {
-      // Check if Supabase is properly configured
-      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-        console.warn('Supabase environment variables not configured. Using default footer settings.');
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('admin_settings')
-        .select('key, value')
-        .in('key', [
-          'footer_phone',
-          'footer_email',
-          'footer_address',
-          'footer_company_name'
-        ]);
-
-      if (error) {
-        console.warn('Error fetching footer settings:', error.message);
-        return;
-      }
-
-      if (data && data.length > 0) {
-        const settings: Record<string, string> = {};
-        data.forEach(setting => {
-          settings[setting.key] = setting.value;
-        });
-
-        // Use siteName as fallback for footer_company_name
-        if (!settings.footer_company_name) {
-          settings.footer_company_name = siteName;
-        }
-
-        setFooterSettings(prev => ({ ...prev, ...settings }));
-      }
-    } catch (error) {
-      console.warn('Network error fetching footer settings:', error);
-      // Keep using default values - no need to throw
-    }
-  };
 
   const getServiceStatus = (serviceId: string) => {
     return serviceConfig[serviceId] || 'active';
@@ -242,7 +192,7 @@ const HomePage: React.FC = () => {
   const features = [
     {
       title: `Simplify Your Payments with ${siteName}`,
-      description: `With ${siteName}, you can enjoy a hassle-free payment experience for all your essential bills and services. We offer a simple, fast, and secure way to pay your utility bills, shop online, and even place bets all in one place.`,
+      description: `With ${siteName}, you can enjoy a hassle-free payment experience for all your essential bills and services. We offer a simple, fast, and secure way to pay your utility bills and shop online all in one place.`,
       icon: <Shield size={32} />,
     },
     {
@@ -651,13 +601,13 @@ const HomePage: React.FC = () => {
                     <span className="text-white font-bold text-lg">{siteName.charAt(0)}</span>
                   )}
                 </div>
-                <span className="text-lg sm:text-xl font-bold">{footerSettings.footer_company_name}</span>
+                <span className="text-lg sm:text-xl font-bold">{footerCompanyName}</span>
               </div>
               <p className="text-gray-400 mb-6 leading-relaxed text-sm sm:text-base">
-                {footerSettings.footer_company_name} is a leading digital services and e-commerce provider that enables users to easily and securely pay for various bills, subscriptions, and shop online for quality products.
+                {footerCompanyName} is a leading digital services and e-commerce provider that enables users to easily and securely pay for various bills, subscriptions, and shop online for quality products.
               </p>
               <p className="text-gray-400 text-sm sm:text-base">
-                <strong>Address:</strong> {footerSettings.footer_address}
+                <strong>Address:</strong> {footerAddress}
               </p>
             </div>
 
@@ -692,15 +642,15 @@ const HomePage: React.FC = () => {
               <div className="mt-6">
                 <h4 className="font-semibold mb-3 text-sm sm:text-base">Contact Info</h4>
                 <ul className="space-y-2 text-gray-400 text-sm">
-                  <li>{footerSettings.footer_phone}</li>
-                  <li className="break-all">{footerSettings.footer_email}</li>
+                  <li>{footerPhone}</li>
+                  <li className="break-all">{footerEmail}</li>
                 </ul>
               </div>
             </div>
           </div>
 
           <div className="border-t border-gray-800 mt-8 sm:mt-12 pt-6 sm:pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-400 text-sm">© {currentYear} {footerSettings.footer_company_name} All rights reserved.</p>
+            <p className="text-gray-400 text-sm">© {currentYear} {footerCompanyName} All rights reserved.</p>
             <div className="flex gap-6 mt-4 md:mt-0">
               <a href="/privacy" className="text-gray-400 hover:text-white transition-colors text-sm">Privacy policy</a>
               <a href="/terms" className="text-gray-400 hover:text-white transition-colors text-sm">Terms of use</a>

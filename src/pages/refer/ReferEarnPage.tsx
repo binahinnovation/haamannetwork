@@ -19,7 +19,7 @@ type Referral = {
 const ReferEarnPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { appBaseUrl, siteName } = useAppSettingsStore();
+  const { appBaseUrl, siteName, footerEmail } = useAppSettingsStore();
   const [copied, setCopied] = useState(false);
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(false);

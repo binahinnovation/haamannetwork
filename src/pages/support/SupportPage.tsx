@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
+import { useAppSettingsStore } from '../../store/appSettingsStore';
 import { supportAPI, TicketCategory } from '../../lib/supportApi';
 import { SupportTicket, TicketMessage } from '../../types';
 import Card from '../../components/ui/Card';
@@ -26,6 +27,7 @@ import { format } from 'date-fns';
 const SupportPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
+  const { footerEmail } = useAppSettingsStore();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewTicketForm, setShowNewTicketForm] = useState(false);
@@ -318,6 +320,7 @@ const SupportPage: React.FC = () => {
               <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-blue-800 dark:text-blue-200">
                   You will be responded to within 1-3 hours depending on the number of staff attending to requests.
+                  For urgent matters, you can also contact us at {footerEmail}.
                 </p>
               </div>
 

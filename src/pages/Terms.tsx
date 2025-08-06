@@ -1,4 +1,9 @@
+import React from 'react';
+import { useAppSettingsStore } from '../store/appSettingsStore';
+
 export default function Terms() {
+  const { footerPhone, footerEmail, footerCompanyName } = useAppSettingsStore();
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Terms of Service</h1>
@@ -6,7 +11,7 @@ export default function Terms() {
         <h1>Terms and Conditions</h1>
   <p><strong>Effective Date:</strong> 01st July, 2025</p>
 
-  <p>Welcome to <strong>Haaman General Merchandise Enterprise</strong>. These Terms and Conditions govern your use of our website <a href="https://haamannetwork.site" target="_blank">https://haamannetwork.site</a> and the purchase of data bundles and related services.</p>
+  <p>Welcome to <strong>{footerCompanyName}</strong>. These Terms and Conditions govern your use of our website and the purchase of data bundles and related services.</p>
 
   <h2>1. Services Offered</h2>
   <p>We provide the sale of data bundles and related digital services. All transactions are subject to availability and verification.</p>
@@ -31,6 +36,13 @@ export default function Terms() {
 
   <h2>8. Changes to Terms</h2>
   <p>We may update these terms at any time. Continued use of the site means you accept the changes.</p>
+
+  <h2>9. Contact Information</h2>
+  <p>If you have any questions about these Terms and Conditions, please contact us:</p>
+  <ul>
+    <li>Email: {footerEmail}</li>
+    <li>Phone: {footerPhone}</li>
+  </ul>
       </div>
     </div>
   );
