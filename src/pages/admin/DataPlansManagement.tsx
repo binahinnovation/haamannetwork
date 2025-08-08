@@ -82,6 +82,7 @@ const DataPlansManagement: React.FC = () => {
     is_popular: false,
     discount_percentage: 0,
     show_discount_badge: false,
+    external_id: '',
   });
 
   const [categoryFormData, setcategoryFormData] = useState({
@@ -92,6 +93,29 @@ const DataPlansManagement: React.FC = () => {
     is_active: true,
     sort_order: 0,
   });
+
+  // Add Plan modal state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({
+    network: '',
+    plan_type: '',
+    size: '',
+    validity: '',
+    external_id: '',
+    cost_price: '',
+    profit_margin: '',
+    selling_price: '',
+    description: '',
+    is_active: true,
+    is_popular: false,
+    discount_percentage: 0,
+    show_discount_badge: false,
+    sort_order: 0,
+  });
+
+  // Success banner and selection state
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user?.isAdmin) {
@@ -162,6 +186,7 @@ const DataPlansManagement: React.FC = () => {
       is_popular: plan.is_popular,
       discount_percentage: plan.discount_percentage || 0,
       show_discount_badge: plan.show_discount_badge || false,
+      external_id: String(plan.external_id || ''),
     });
     setShowEditModal(true);
   };
@@ -173,8 +198,13 @@ const DataPlansManagement: React.FC = () => {
       const profit_margin = parseFloat(formData.profit_margin);
       const selling_price = parseFloat(formData.selling_price);
       const discount_percentage = parseInt(formData.discount_percentage.toString());
+      const external_id_num = parseInt(String(formData.external_id));
       
       // Validate inputs
+      if (isNaN(external_id_num) || external_id_num <= 0) {
+        alert('Please enter a valid External ID (number)');
+        return;
+      }
       if (isNaN(profit_margin) || isNaN(selling_price) || selling_price <= 0) {
         alert('Please enter valid numbers for selling price and profit margin');
         return;
@@ -195,6 +225,7 @@ const DataPlansManagement: React.FC = () => {
           is_popular: formData.is_popular,
           discount_percentage: discount_percentage,
           show_discount_badge: formData.show_discount_badge,
+          external_id: external_id_num,
         })
         .eq('id', editingPlan.id);
 
@@ -208,15 +239,189 @@ const DataPlansManagement: React.FC = () => {
           plan_id: editingPlan.id,
           plan_name: editingPlan.description,
           network: editingPlan.network,
+          external_id_old: editingPlan.external_id,
+          external_id_new: external_id_num,
         },
       }]);
 
       fetchDataPlans();
       setShowEditModal(false);
       setEditingPlan(null);
+      setSuccessMessage('Data plan updated successfully');
+      setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       console.error('Error updating data plan:', error);
       alert('Error updating data plan. Please try again.');
+    }
+  };
+
+  // Open Add Plan Modal
+  const handleOpenAddPlan = () => {
+    setAddForm({
+      network: '',
+      plan_type: '',
+      size: '',
+      validity: '',
+      external_id: '',
+      cost_price: '',
+      profit_margin: globalProfitMargin || '15',
+      selling_price: '',
+      description: '',
+      is_active: true,
+      is_popular: false,
+      discount_percentage: 0,
+      show_discount_badge: false,
+      sort_order: 0,
+    });
+    setShowAddModal(true);
+  };
+
+  // Save new plan
+  const handleSaveNewPlan = async () => {
+    try {
+      // Basic validation
+      if (!addForm.network || !addForm.plan_type || !addForm.size || !addForm.validity) {
+        alert('Please fill in Network, Plan Type, Size, and Validity');
+        return;
+      }
+      const external_id_num = parseInt(addForm.external_id);
+      if (isNaN(external_id_num) || external_id_num <= 0) {
+        alert('Please enter a valid External ID');
+        return;
+      }
+      const cost_price_num = parseFloat(addForm.cost_price);
+      if (isNaN(cost_price_num) || cost_price_num <= 0) {
+        alert('Please enter a valid Cost Price');
+        return;
+      }
+      const profit_margin_num = parseFloat(addForm.profit_margin || '0');
+      const selling_price_num = addForm.selling_price
+        ? parseFloat(addForm.selling_price)
+        : Math.ceil(cost_price_num + (cost_price_num * (profit_margin_num / 100)));
+      const discount_percentage_num = parseInt(String(addForm.discount_percentage));
+      const sort_order_num = parseInt(String(addForm.sort_order || 0));
+
+      const { error } = await supabase
+        .from('data_plans')
+        .insert([{
+          external_id: external_id_num,
+          network: addForm.network,
+          plan_type: addForm.plan_type,
+          size: addForm.size,
+          validity: addForm.validity,
+          cost_price: cost_price_num,
+          selling_price: selling_price_num,
+          profit_margin: profit_margin_num,
+          description: addForm.description,
+          is_active: addForm.is_active,
+          is_popular: addForm.is_popular,
+          sort_order: isNaN(sort_order_num) ? 0 : sort_order_num,
+          discount_percentage: isNaN(discount_percentage_num) ? 0 : discount_percentage_num,
+          show_discount_badge: addForm.show_discount_badge,
+        }]);
+
+      if (error) throw error;
+
+      // Log admin action
+      await supabase.from('admin_logs').insert([{
+        admin_id: user?.id,
+        action: 'create_data_plan',
+        details: {
+          network: addForm.network,
+          plan_type: addForm.plan_type,
+          size: addForm.size,
+          validity: addForm.validity,
+          external_id: external_id_num,
+        },
+      }]);
+
+      fetchDataPlans();
+      setShowAddModal(false);
+      setSuccessMessage('Data plan created successfully');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      console.error('Error creating data plan:', error);
+      alert('Error creating data plan. Please ensure External ID is unique and try again.');
+    }
+  };
+
+  // Selection helpers
+  const togglePlanSelection = (planId: string) => {
+    setSelectedPlanIds(prev => {
+      const next = new Set(prev);
+      if (next.has(planId)) next.delete(planId); else next.add(planId);
+      return next;
+    });
+  };
+
+  const toggleSelectAllInGroup = (plansInGroup: DataPlan[]) => {
+    const allSelected = plansInGroup.every(p => selectedPlanIds.has(p.id));
+    setSelectedPlanIds(prev => {
+      const next = new Set(prev);
+      if (allSelected) {
+        plansInGroup.forEach(p => next.delete(p.id));
+      } else {
+        plansInGroup.forEach(p => next.add(p.id));
+      }
+      return next;
+    });
+  };
+
+  // Delete single plan
+  const handleDeletePlan = async (plan: DataPlan) => {
+    const confirmed = window.confirm(`Delete data plan "${plan.description}" for ${plan.network}? This cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from('data_plans')
+        .delete()
+        .eq('id', plan.id);
+      if (error) throw error;
+
+      await supabase.from('admin_logs').insert([{
+        admin_id: user?.id,
+        action: 'delete_data_plan',
+        details: { plan_id: plan.id, network: plan.network, size: plan.size, plan_type: plan.plan_type },
+      }]);
+
+      setSelectedPlanIds(prev => { const next = new Set(prev); next.delete(plan.id); return next; });
+      fetchDataPlans();
+      setSuccessMessage('Data plan deleted');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      console.error('Error deleting data plan:', error);
+      alert('Error deleting data plan.');
+    }
+  };
+
+  // Bulk delete
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedPlanIds);
+    if (ids.length === 0) return;
+    const confirmed = window.confirm(`Delete ${ids.length} selected data plan(s)? This cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from('data_plans')
+        .delete()
+        .in('id', ids);
+      if (error) throw error;
+
+      await supabase.from('admin_logs').insert([{
+        admin_id: user?.id,
+        action: 'bulk_delete_data_plans',
+        details: { count: ids.length, plan_ids: ids },
+      }]);
+
+      setSelectedPlanIds(new Set());
+      fetchDataPlans();
+      setSuccessMessage('Selected data plans deleted');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      console.error('Error bulk deleting data plans:', error);
+      alert('Error bulk deleting data plans.');
     }
   };
 
@@ -580,6 +785,21 @@ const DataPlansManagement: React.FC = () => {
             
             <div className="flex space-x-3">
               <button
+                onClick={() => handleOpenAddPlan()}
+                className="flex items-center px-4 py-2 bg-[#0F9D58] text-white rounded-lg hover:bg-[#0d8a4f] transition-colors"
+              >
+                <Plus size={16} className="mr-2" />
+                Add Plan
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={selectedPlanIds.size === 0}
+                className={`flex items-center px-4 py-2 rounded-lg transition-colors ${selectedPlanIds.size === 0 ? 'bg-red-300 text-white opacity-50 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700'}`}
+              >
+                <Trash2 size={16} className="mr-2" />
+                Bulk Delete
+              </button>
+              <button
                 onClick={() => handleAddEditCategory()}
                 className="flex items-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
               >
@@ -606,6 +826,16 @@ const DataPlansManagement: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Success Banner */}
+      {successMessage && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 px-4 py-3 rounded-lg flex items-center justify-between">
+            <span className="text-sm font-medium">{successMessage}</span>
+            <button onClick={() => setSuccessMessage('')} className="text-sm">×</button>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Global Profit Margin Setting */}
@@ -707,6 +937,13 @@ const DataPlansManagement: React.FC = () => {
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <input
+                            type="checkbox"
+                            checked={plans.every(p => selectedPlanIds.has(p.id)) && plans.length > 0}
+                            onChange={() => toggleSelectAllInGroup(plans)}
+                          />
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                           Data Size
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -738,6 +975,13 @@ const DataPlansManagement: React.FC = () => {
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                       {plans.map((plan) => (
                         <tr key={plan.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="checkbox"
+                              checked={selectedPlanIds.has(plan.id)}
+                              onChange={() => togglePlanSelection(plan.id)}
+                            />
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                             {plan.size}
                           </td>
@@ -833,6 +1077,13 @@ const DataPlansManagement: React.FC = () => {
                             >
                               {plan.show_discount_badge ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
                             </button>
+                            <button
+                              onClick={() => handleDeletePlan(plan)}
+                              className="text-red-600 hover:text-red-800"
+                              title="Delete Plan"
+                            >
+                              <Trash2 size={16} />
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -850,6 +1101,219 @@ const DataPlansManagement: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Add Plan Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Add Data Plan</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Network</label>
+                  <select
+                    value={addForm.network}
+                    onChange={(e) => setAddForm({...addForm, network: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
+                  >
+                    <option value="">Select Network</option>
+                    <option value="MTN">MTN</option>
+                    <option value="AIRTEL">AIRTEL</option>
+                    <option value="GLO">GLO</option>
+                    <option value="9MOBILE">9MOBILE</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plan Type</label>
+                  <select
+                    value={addForm.plan_type}
+                    onChange={(e) => setAddForm({...addForm, plan_type: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
+                  >
+                    <option value="">Select Plan Type</option>
+                    {categories.map(c => (
+                      <option key={`${c.network}-${c.plan_type}`} value={c.plan_type}>
+                        {c.network === addForm.network || !addForm.network ? `${c.network} - ${c.display_name}` : `${c.network} - ${c.display_name}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">External ID</label>
+                  <input
+                    type="number"
+                    value={addForm.external_id}
+                    onChange={(e) => setAddForm({...addForm, external_id: e.target.value})}
+                    placeholder="Provider plan ID"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sort Order</label>
+                  <input
+                    type="number"
+                    value={addForm.sort_order}
+                    onChange={(e) => setAddForm({...addForm, sort_order: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Size</label>
+                  <input
+                    type="text"
+                    value={addForm.size}
+                    onChange={(e) => setAddForm({...addForm, size: e.target.value})}
+                    placeholder="e.g., 1GB"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Validity</label>
+                  <input
+                    type="text"
+                    value={addForm.validity}
+                    onChange={(e) => setAddForm({...addForm, validity: e.target.value})}
+                    placeholder="e.g., 30 days"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cost Price (₦)</label>
+                  <input
+                    type="number"
+                    value={addForm.cost_price}
+                    onChange={(e) => {
+                      const cost = e.target.value;
+                      let selling = addForm.selling_price;
+                      const margin = parseFloat(addForm.profit_margin || '0');
+                      if (!isNaN(parseFloat(cost)) && !isNaN(margin)) {
+                        selling = String(Math.ceil(parseFloat(cost) + (parseFloat(cost) * (margin / 100))));
+                      }
+                      setAddForm({...addForm, cost_price: cost, selling_price: selling});
+                    }}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Profit Margin (%)</label>
+                  <input
+                    type="number"
+                    value={addForm.profit_margin}
+                    onChange={(e) => {
+                      const margin = e.target.value;
+                      let selling = addForm.selling_price;
+                      const cost = parseFloat(addForm.cost_price || '0');
+                      if (!isNaN(parseFloat(margin)) && !isNaN(cost) && cost > 0) {
+                        selling = String(Math.ceil(cost + (cost * (parseFloat(margin) / 100))));
+                      }
+                      setAddForm({...addForm, profit_margin: margin, selling_price: selling});
+                    }}
+                    min="0"
+                    step="0.1"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Selling Price (₦)</label>
+                  <input
+                    type="number"
+                    value={addForm.selling_price}
+                    onChange={(e) => setAddForm({...addForm, selling_price: e.target.value})}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
+                <input
+                  type="text"
+                  value={addForm.description}
+                  onChange={(e) => setAddForm({...addForm, description: e.target.value})}
+                  placeholder="e.g., 1GB (SME) monthly"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={addForm.is_active}
+                    onChange={(e) => setAddForm({...addForm, is_active: e.target.checked})}
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Active</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={addForm.is_popular}
+                    onChange={(e) => setAddForm({...addForm, is_popular: e.target.checked})}
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Popular</span>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Discount (%)</label>
+                  <input
+                    type="number"
+                    value={addForm.discount_percentage}
+                    onChange={(e) => setAddForm({...addForm, discount_percentage: parseInt(e.target.value) || 0})}
+                    min="0"
+                    max="100"
+                    step="1"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
+                  />
+                </div>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={addForm.show_discount_badge}
+                    onChange={(e) => setAddForm({...addForm, show_discount_badge: e.target.checked})}
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Show Discount Badge</span>
+                </label>
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveNewPlan}
+                  className="flex-1 px-4 py-2 bg-[#0F9D58] text-white rounded-lg hover:bg-[#0d8a4f] transition-colors"
+                >
+                  Save Plan
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Plan Modal */}
       {showEditModal && editingPlan && (
@@ -884,6 +1348,18 @@ const DataPlansManagement: React.FC = () => {
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">External ID</label>
+                <input
+                  type="number"
+                  value={formData.external_id}
+                  onChange={(e) => setFormData({...formData, external_id: e.target.value})}
+                  placeholder="Provider plan ID"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">This must match the provider's plan ID used for API requests.</p>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Description
                 </label>
@@ -913,7 +1389,7 @@ const DataPlansManagement: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Profit Margin (%)
                 </label>
                 <input

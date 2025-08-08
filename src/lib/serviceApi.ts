@@ -1,4 +1,5 @@
 import { maskawaAPI } from './maskawaApi';
+import { smeplugAPI } from './smeplugApi';
 import { supabase } from './supabase';
 import { generateTransactionReference } from './utils';
 
@@ -37,7 +38,7 @@ class ServiceAPI {
       details: {
         network: data.network,
         phone: data.phoneNumber,
-        service_provider: 'maskawa',
+        service_provider: 'smeplug', // Updated to use SME Plug
       },
     };
 
@@ -53,11 +54,12 @@ class ServiceAPI {
     }
 
     try {
-      // Call MASKAWA API
-      const apiResponse = await maskawaAPI.buyAirtime({
+      // Call SME Plug API for airtime purchase
+      const apiResponse = await smeplugAPI.buyAirtime({
         network: data.network as any,
         amount: data.amount,
-        mobile_number: data.phoneNumber,
+        phone: data.phoneNumber,
+        customer_reference: reference,
       });
 
       // Update transaction as successful
@@ -68,7 +70,7 @@ class ServiceAPI {
           details: {
             ...transaction.details,
             api_response: apiResponse,
-            external_reference: apiResponse?.reference || apiResponse?.id,
+            external_reference: apiResponse?.data?.reference || apiResponse?.reference,
           },
         })
         .eq('id', dbTransaction.id);
@@ -81,10 +83,16 @@ class ServiceAPI {
       return {
         ...dbTransaction,
         status: 'success',
+        details: {
+          ...transaction.details,
+          api_response: apiResponse,
+          external_reference: apiResponse?.data?.reference || apiResponse?.reference,
+        },
       };
+
     } catch (error: any) {
-      console.error('API error during airtime purchase:', error);
-      
+      console.error('Airtime purchase error:', error);
+
       // Update transaction as failed
       const { error: updateError } = await supabase
         .from('transactions')
@@ -92,8 +100,7 @@ class ServiceAPI {
           status: 'failed',
           details: {
             ...transaction.details,
-            error: error instanceof Error ? error.message : 'Unknown error',
-            error_time: new Date().toISOString(),
+            error: error.message,
           },
         })
         .eq('id', dbTransaction.id);
@@ -157,7 +164,7 @@ class ServiceAPI {
         network: data.network,
         plan: data.plan,
         phone: data.phoneNumber,
-        service_provider: 'maskawa',
+        service_provider: 'smeplug', // Updated to use SME Plug
       },
     };
 
@@ -173,11 +180,12 @@ class ServiceAPI {
     }
 
     try {
-      // Call MASKAWA API
-      const apiResponse = await maskawaAPI.buyData({
+      // Call SME Plug API for data purchase
+      const apiResponse = await smeplugAPI.buyData({
         network: data.network as any,
-        mobile_number: data.phoneNumber,
-        plan: data.plan,
+        phone: data.phoneNumber,
+        plan_id: data.plan,
+        customer_reference: reference,
       });
 
       // Update transaction as successful
@@ -188,7 +196,7 @@ class ServiceAPI {
           details: {
             ...transaction.details,
             api_response: apiResponse,
-            external_reference: apiResponse?.reference || apiResponse?.id,
+            external_reference: apiResponse?.data?.reference || apiResponse?.reference,
           },
         })
         .eq('id', dbTransaction.id);
@@ -201,10 +209,16 @@ class ServiceAPI {
       return {
         ...dbTransaction,
         status: 'success',
+        details: {
+          ...transaction.details,
+          api_response: apiResponse,
+          external_reference: apiResponse?.data?.reference || apiResponse?.reference,
+        },
       };
+
     } catch (error: any) {
-      console.error('API error during data purchase:', error);
-      
+      console.error('Data purchase error:', error);
+
       // Update transaction as failed
       const { error: updateError } = await supabase
         .from('transactions')
@@ -212,8 +226,7 @@ class ServiceAPI {
           status: 'failed',
           details: {
             ...transaction.details,
-            error: error instanceof Error ? error.message : 'Unknown error',
-            error_time: new Date().toISOString(),
+            error: error.message,
           },
         })
         .eq('id', dbTransaction.id);
