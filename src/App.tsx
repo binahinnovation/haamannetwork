@@ -24,6 +24,9 @@ import ComingSoonPage from './pages/ComingSoonPage';
 import SupportPage from './pages/support/SupportPage';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
+import About from './pages/About';
+import FAQ from './pages/FAQ';
+import Contact from './pages/Contact';
 
 // Admin Pages
 import AdminLoginPage from './pages/admin/AdminLoginPage';
@@ -109,6 +112,9 @@ function App() {
           <Route path="refer" element={<ReferEarnPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="support" element={<SupportPage />} />
+          <Route path="about" element={<About />} />
+          <Route path="faq" element={<FAQ />} />
+          <Route path="contact" element={<Contact />} />
         </Route>
       </Routes>
     </Router>
