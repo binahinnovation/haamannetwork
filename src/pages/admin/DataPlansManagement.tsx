@@ -42,6 +42,7 @@ type DataPlan = {
   sort_order: number;
   discount_percentage: number;
   show_discount_badge: boolean;
+  provider?: 'maskawa' | 'smeplug';
 };
 
 type DataPlanCategory = {
@@ -83,6 +84,7 @@ const DataPlansManagement: React.FC = () => {
     discount_percentage: 0,
     show_discount_badge: false,
     external_id: '',
+    provider: 'smeplug',
   });
 
   const [categoryFormData, setcategoryFormData] = useState({
@@ -102,6 +104,7 @@ const DataPlansManagement: React.FC = () => {
     size: '',
     validity: '',
     external_id: '',
+    provider: 'smeplug',
     cost_price: '',
     profit_margin: '',
     selling_price: '',
@@ -187,6 +190,7 @@ const DataPlansManagement: React.FC = () => {
       discount_percentage: plan.discount_percentage || 0,
       show_discount_badge: plan.show_discount_badge || false,
       external_id: String(plan.external_id || ''),
+      provider: plan.provider || 'smeplug',
     });
     setShowEditModal(true);
   };
@@ -199,6 +203,7 @@ const DataPlansManagement: React.FC = () => {
       const selling_price = parseFloat(formData.selling_price);
       const discount_percentage = parseInt(formData.discount_percentage.toString());
       const external_id_num = parseInt(String(formData.external_id));
+      const provider_value = formData.provider === 'maskawa' ? 'maskawa' : 'smeplug';
       
       // Validate inputs
       if (isNaN(external_id_num) || external_id_num <= 0) {
@@ -226,6 +231,7 @@ const DataPlansManagement: React.FC = () => {
           discount_percentage: discount_percentage,
           show_discount_badge: formData.show_discount_badge,
           external_id: external_id_num,
+          provider: provider_value,
         })
         .eq('id', editingPlan.id);
 
@@ -241,6 +247,7 @@ const DataPlansManagement: React.FC = () => {
           network: editingPlan.network,
           external_id_old: editingPlan.external_id,
           external_id_new: external_id_num,
+          provider: provider_value,
         },
       }]);
 
@@ -318,6 +325,7 @@ const DataPlansManagement: React.FC = () => {
           sort_order: isNaN(sort_order_num) ? 0 : sort_order_num,
           discount_percentage: isNaN(discount_percentage_num) ? 0 : discount_percentage_num,
           show_discount_badge: addForm.show_discount_badge,
+          provider: addForm.provider as any,
         }]);
 
       if (error) throw error;
@@ -332,6 +340,7 @@ const DataPlansManagement: React.FC = () => {
           size: addForm.size,
           validity: addForm.validity,
           external_id: external_id_num,
+          provider: addForm.provider,
         },
       }]);
 
@@ -1166,6 +1175,21 @@ const DataPlansManagement: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Provider</label>
+                  <select
+                    value={addForm.provider}
+                    onChange={(e) => setAddForm({ ...addForm, provider: e.target.value as any })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
+                  >
+                    <option value="smeplug">SME Plug</option>
+                    <option value="maskawa">Maskawa</option>
+                  </select>
+                </div>
+                <div></div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Size</label>
                   <input
                     type="text"
@@ -1357,6 +1381,18 @@ const DataPlansManagement: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">This must match the provider's plan ID used for API requests.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Provider</label>
+                <select
+                  value={formData.provider}
+                  onChange={(e) => setFormData({ ...formData, provider: e.target.value as any })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
+                >
+                  <option value="smeplug">SME Plug</option>
+                  <option value="maskawa">Maskawa</option>
+                </select>
               </div>
 
               <div>

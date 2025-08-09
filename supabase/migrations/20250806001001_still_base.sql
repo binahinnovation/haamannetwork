@@ -21,3 +21,20 @@ VALUES
   ('footer_address', 'Lagos, Nigeria', 'Business address displayed in footer', NULL),
   ('footer_company_name', 'Haaman Network', 'Company name displayed in footer', NULL)
 ON CONFLICT (key) DO NOTHING;
+
+-- Ensure airtime provider setting exists with default 'maskawa'
+INSERT INTO admin_settings (key, value, description, updated_by)
+VALUES ('airtime_provider', 'maskawa', 'Default airtime provider (maskawa or smeplug). Maskawa is the default.', NULL)
+ON CONFLICT (key) DO NOTHING;
+
+-- Ensure data_plans has provider column for per-plan routing
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'data_plans' AND column_name = 'provider'
+  ) THEN
+    ALTER TABLE data_plans ADD COLUMN provider text;
+    UPDATE data_plans SET provider = 'smeplug' WHERE provider IS NULL;
+  END IF;
+END $$;

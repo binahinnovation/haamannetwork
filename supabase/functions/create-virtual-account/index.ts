@@ -17,13 +17,11 @@ serve(async (req) => {
   }
 
   try {
-    // Get Paystack secret key from environment variables
-    const paystackSecretKey = Deno.env.get("PAYSTACK_SECRET_KEY");
-    if (!paystackSecretKey) {
-      throw new Error("Paystack secret key not configured. Set PAYSTACK_SECRET_KEY in Edge Function secrets.");
+    // Get Flutterwave secret key from environment variables
+    const flutterwaveSecretKey = Deno.env.get("FLUTTERWAVE_SECRET_KEY");
+    if (!flutterwaveSecretKey) {
+      throw new Error("Flutterwave secret key not configured. Set FLUTTERWAVE_SECRET_KEY in Edge Function secrets.");
     }
-
-    const preferredBank = Deno.env.get("PAYSTACK_PREFERRED_BANK") || "titan-paystack"; // fallback; use 'test-bank' in test
 
     // Initialize Supabase client with service role key for admin access
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
@@ -47,46 +45,55 @@ serve(async (req) => {
 
     const siteName = siteNameSetting?.value || 'Haaman Network';
 
-    // Prepare request to Paystack Dedicated Virtual Account (single-step assign)
-    const assignPayload: Record<string, any> = {
+    // Generate a tx_ref to map webhook events to this user
+    const txRef = `haaman-${userId}-${Date.now()}`;
+
+    // Prepare request payload for Flutterwave virtual account creation
+    const flwPayload: Record<string, any> = {
       email,
-      first_name: firstName,
-      last_name: lastName,
-      phone: phoneNumber || "",
-      preferred_bank: preferredBank,
-      country: country || 'NG',
+      tx_ref: txRef,
+      phonenumber: phoneNumber || "",
+      firstname: firstName,
+      lastname: lastName,
+      narration: `${siteName} Wallet Funding - ${firstName} ${lastName}`,
+      is_permanent: true,
     };
 
     // Include BVN if provided (for categories that require validation)
     if (bvn) {
-      assignPayload.bvn = bvn;
+      flwPayload.bvn = bvn;
     }
 
-    // Make request to Paystack API
-    const response = await fetch("https://api.paystack.co/dedicated_account/assign", {
+    // Call Flutterwave API
+    const flwResponse = await fetch("https://api.flutterwave.com/v3/virtual-account-numbers", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${paystackSecretKey}`,
+        "Authorization": `Bearer ${flutterwaveSecretKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(assignPayload),
+      body: JSON.stringify(flwPayload),
     });
 
-    const responseData = await response.json();
+    const flwText = await flwResponse.text();
+    let flwJson: any;
+    try {
+      flwJson = JSON.parse(flwText || "{}");
+    } catch {
+      flwJson = { raw: flwText };
+    }
 
-    if (!response.ok || responseData?.status === false) {
-      const message = responseData?.message || responseData?.error || 'Unknown error';
-      throw new Error(`Failed to create virtual account: ${message}`);
+    if (!flwResponse.ok || (flwJson?.status && flwJson.status !== "success")) {
+      const message = flwJson?.message || flwJson?.error || flwText || "Unknown error";
+      throw new Error(`Failed to create Flutterwave virtual account: ${message}`);
     }
 
     // Extract virtual account details
-    // Expected structure: data.dedicated_account or data with { bank: { name }, account_number, account_name }
-    const dataObj = responseData.data || {};
-    const bankName: string = dataObj?.bank?.name || dataObj?.bank_name || 'Paystack Partner Bank';
+    const dataObj = flwJson?.data || {};
+    const bankName: string = dataObj?.bank_name || dataObj?.bank?.name || 'Flutterwave Partner Bank';
     const accountNumber: string = dataObj?.account_number;
 
     if (!accountNumber) {
-      throw new Error('Paystack response missing account number');
+      throw new Error('Flutterwave response missing account number');
     }
 
     // Update user profile with virtual account details
@@ -95,7 +102,7 @@ serve(async (req) => {
       .update({
         virtual_account_bank_name: bankName,
         virtual_account_number: accountNumber,
-        virtual_account_reference: null, // Paystack doesn't return tx_ref like Flutterwave
+        virtual_account_reference: txRef,
         bvn: bvn || null,
       })
       .eq("id", userId);
@@ -110,13 +117,12 @@ serve(async (req) => {
       admin_id: null,
       action: "create_virtual_account",
       details: {
-        provider: 'paystack',
+        provider: 'flutterwave',
         site_name: siteName,
         user_id: userId,
         email,
         bank_name: bankName,
         account_number: accountNumber?.slice(-4),
-        preferred_bank: preferredBank,
         bvn_included: !!bvn,
       },
     }]);
@@ -128,7 +134,7 @@ serve(async (req) => {
         data: {
           bank_name: bankName,
           account_number: accountNumber,
-          reference: null,
+          reference: txRef,
         },
       }),
       {

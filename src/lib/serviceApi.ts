@@ -27,6 +27,21 @@ class ServiceAPI {
     }
   ): Promise<ServiceTransaction> {
     const reference = generateTransactionReference();
+
+    // Determine airtime provider from admin settings (default: maskawa)
+    let airtimeProvider: 'maskawa' | 'smeplug' = 'maskawa';
+    try {
+      const { data: providerSetting } = await supabase
+        .from('admin_settings')
+        .select('value')
+        .eq('key', 'airtime_provider')
+        .single();
+      if (providerSetting?.value === 'smeplug' || providerSetting?.value === 'maskawa') {
+        airtimeProvider = providerSetting.value as 'maskawa' | 'smeplug';
+      }
+    } catch (_) {
+      // Ignore and use default
+    }
     
     // Create pending transaction
     const transaction = {
@@ -38,7 +53,7 @@ class ServiceAPI {
       details: {
         network: data.network,
         phone: data.phoneNumber,
-        service_provider: 'smeplug', // Updated to use SME Plug
+        service_provider: airtimeProvider,
       },
     };
 
@@ -54,13 +69,20 @@ class ServiceAPI {
     }
 
     try {
-      // Call SME Plug API for airtime purchase
-      const apiResponse = await smeplugAPI.buyAirtime({
-        network: data.network as any,
-        amount: data.amount,
-        phone: data.phoneNumber,
-        customer_reference: reference,
-      });
+      // Route to selected provider
+      const apiResponse =
+        airtimeProvider === 'smeplug'
+          ? await smeplugAPI.buyAirtime({
+              network: data.network as any,
+              amount: data.amount,
+              phone: data.phoneNumber,
+              customer_reference: reference,
+            })
+          : await maskawaAPI.buyAirtime({
+              network: data.network as any,
+              amount: data.amount,
+              mobile_number: data.phoneNumber,
+            });
 
       // Update transaction as successful
       const { error: updateError } = await supabase
@@ -70,7 +92,11 @@ class ServiceAPI {
           details: {
             ...transaction.details,
             api_response: apiResponse,
-            external_reference: apiResponse?.data?.reference || apiResponse?.reference,
+            external_reference:
+              // SME Plug
+              (apiResponse as any)?.data?.reference || (apiResponse as any)?.reference ||
+              // MASKAWA
+              (apiResponse as any)?.id,
           },
         })
         .eq('id', dbTransaction.id);
@@ -164,7 +190,7 @@ class ServiceAPI {
         network: data.network,
         plan: data.plan,
         phone: data.phoneNumber,
-        service_provider: 'smeplug', // Updated to use SME Plug
+        service_provider: 'smeplug',
       },
     };
 
@@ -180,13 +206,43 @@ class ServiceAPI {
     }
 
     try {
-      // Call SME Plug API for data purchase
-      const apiResponse = await smeplugAPI.buyData({
-        network: data.network as any,
-        phone: data.phoneNumber,
-        plan_id: data.plan,
-        customer_reference: reference,
-      });
+      // Determine provider per plan using external_id
+      let planProvider: 'smeplug' | 'maskawa' = 'smeplug';
+      try {
+        const externalIdNum = parseInt(data.plan);
+        const { data: planRow } = await supabase
+          .from('data_plans')
+          .select('provider')
+          .eq('external_id', externalIdNum)
+          .maybeSingle();
+        if (planRow?.provider === 'maskawa' || planRow?.provider === 'smeplug') {
+          planProvider = planRow.provider as 'smeplug' | 'maskawa';
+        }
+      } catch (_) {
+        // ignore; default smeplug
+      }
+
+      // Update details with chosen provider
+      await supabase
+        .from('transactions')
+        .update({
+          details: { ...transaction.details, service_provider: planProvider },
+        })
+        .eq('reference', reference);
+
+      const apiResponse =
+        planProvider === 'smeplug'
+          ? await smeplugAPI.buyData({
+              network: data.network as any,
+              phone: data.phoneNumber,
+              plan_id: data.plan,
+              customer_reference: reference,
+            })
+          : await maskawaAPI.buyData({
+              network: data.network as any,
+              mobile_number: data.phoneNumber,
+              plan: data.plan,
+            });
 
       // Update transaction as successful
       const { error: updateError } = await supabase
@@ -196,7 +252,11 @@ class ServiceAPI {
           details: {
             ...transaction.details,
             api_response: apiResponse,
-            external_reference: apiResponse?.data?.reference || apiResponse?.reference,
+            external_reference:
+              // SME Plug
+              (apiResponse as any)?.data?.reference || (apiResponse as any)?.reference ||
+              // MASKAWA
+              (apiResponse as any)?.id,
           },
         })
         .eq('id', dbTransaction.id);

@@ -114,6 +114,11 @@ const AdminSettings: React.FC = () => {
   const ensureRequiredSettings = async () => {
     const requiredSettings = [
       {
+        key: 'airtime_provider',
+        value: 'maskawa',
+        description: 'Default airtime provider (maskawa or smeplug). Maskawa is the default.'
+      },
+      {
         key: 'referral_reward_enabled',
         value: 'true',
         description: 'Enable or disable the data reward for referrals'
@@ -233,6 +238,36 @@ const AdminSettings: React.FC = () => {
     ];
 
     try {
+      // Ensure essential API settings exist so inputs are always visible
+      const requiredApiSettings = [
+        {
+          key_name: 'maskawa_token',
+          key_value: 'YOUR_MASKAWA_TOKEN_HERE',
+          description: 'MASKAWA API token used by maskawa-proxy edge function'
+        },
+        {
+          key_name: 'maskawa_base_url',
+          key_value: 'https://maskawasubapi.com',
+          description: 'MASKAWA API base URL'
+        }
+      ];
+
+      const { error: apiEnsureError } = await supabase
+        .from('api_settings')
+        .upsert(
+          requiredApiSettings.map(s => ({
+            key_name: s.key_name,
+            key_value: s.key_value,
+            description: s.description,
+            updated_by: user?.id
+          })),
+          { onConflict: 'key_name', ignoreDuplicates: false }
+        );
+
+      if (apiEnsureError) {
+        console.error('Error ensuring API settings:', apiEnsureError);
+      }
+
       // Use upsert to insert or update settings without causing conflicts
       const { error } = await supabase
         .from('admin_settings')
@@ -443,6 +478,7 @@ const AdminSettings: React.FC = () => {
 
   const settingCategories = {
     'API Configuration': ['maskawa_token', 'maskawa_base_url', 'flutterwave_public_key', 'flutterwave_encryption_key'],
+    'Service Providers': ['airtime_provider'],
     'General': ['site_name', 'site_logo_url', 'app_base_url', 'support_email', 'support_phone'],
     'Footer Information': ['footer_company_name', 'footer_email', 'footer_phone', 'footer_address'],
     'Homepage Banners': ['hero_banner_image', 'hero_banner_image_alt', 'steps_banner_image'],
@@ -633,7 +669,16 @@ const AdminSettings: React.FC = () => {
                           {setting.description}
                         </p>
                         
-                        {setting.key === 'maintenance_mode' || 
+                        {setting.key === 'airtime_provider' ? (
+                          <select
+                            value={formData[key] || setting.value}
+                            onChange={(e) => handleChange(key, e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
+                          >
+                            <option value="maskawa">Maskawa (Default)</option>
+                            <option value="smeplug">SME Plug</option>
+                          </select>
+                        ) : setting.key === 'maintenance_mode' || 
                           setting.key === 'download_app_enabled' || 
                           setting.key === 'referral_reward_enabled' ||
                           setting.key === 'funding_charge_enabled' ? (
