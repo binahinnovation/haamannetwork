@@ -36,14 +36,12 @@ const Layout: React.FC = () => {
   };
 
   const isHomePage = location.pathname === '/' && !isAuthenticated;
-  const isDashboardPage = location.pathname === '/' && isAuthenticated;
+  const isDashboardPage = false;
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Show header for all pages except dashboard when authenticated */}
-      {!isDashboardPage && (
-        <Header toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
-      )}
+      {/* Show header on all pages, including dashboard */}
+      <Header toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
       
       <main className={`flex-1 ${!isDashboardPage && !isHomePage ? 'container-pad' : ''} ${isAuthenticated ? 'pb-32' : ''}`}>
         <Outlet />

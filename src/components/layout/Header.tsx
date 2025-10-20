@@ -30,19 +30,19 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode, isDarkMode }) => {
   if (isHomePage) {
     return (
       <header className="absolute top-0 left-0 right-0 z-50 bg-transparent">
-        <div className="container-pad h-20 flex items-center justify-between">
+        <div className="container-pad h-24 flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-lg">
               {siteLogoUrl ? (
-                <img src={siteLogoUrl} alt={siteName} className="w-8 h-8 object-contain" />
+                <img src={siteLogoUrl} alt={siteName} className="w-12 h-12 object-contain" />
               ) : (
-                <span className="text-[#0F9D58] font-bold text-xl">
+                <span className="text-[#0F9D58] font-bold text-2xl">
                   {siteName.charAt(0)}
                 </span>
               )}
             </div>
-            <span className="text-white font-bold text-xl hidden sm:block">{siteName}</span>
+            <span className="text-white font-bold text-2xl hidden sm:block">{siteName}</span>
           </div>
 
           {/* Desktop Navigation */}
@@ -137,16 +137,16 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode, isDarkMode }) => {
   // Regular header for other pages
   return (
     <header className="sticky top-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-      <div className="container-pad h-16 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#0F9D58] rounded-lg flex items-center justify-center">
+      <div className="container-pad h-20 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-[#0F9D58] rounded-xl flex items-center justify-center">
             {siteLogoUrl ? (
-              <img src={siteLogoUrl} alt={siteName} className="w-6 h-6 object-contain" />
+              <img src={siteLogoUrl} alt={siteName} className="w-10 h-10 object-contain" />
             ) : (
-              <span className="text-white font-bold text-lg">{siteName.charAt(0)}</span>
+              <span className="text-white font-bold text-xl">{siteName.charAt(0)}</span>
             )}
           </div>
-          <span className="text-xl font-bold text-[#0F9D58]">{siteName}</span>
+          <span className="text-2xl font-bold text-[#0F9D58]">{siteName}</span>
         </div>
         
         <div className="flex items-center space-x-4">

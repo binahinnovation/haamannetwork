@@ -3,10 +3,12 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, User, Phone, Eye, EyeOff, AlertCircle, CheckCircle, Gift, CreditCard } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
+import { useAppSettingsStore } from '../../store/appSettingsStore';
 
 const SignupPage: React.FC = () => {
   const navigate = useNavigate();
   const { signup, isLoading } = useAuthStore();
+  const { siteName, siteLogoUrl } = useAppSettingsStore();
   const [searchParams] = useSearchParams();
   const referralCode = searchParams.get('ref');
   
@@ -172,10 +174,15 @@ const SignupPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         {/* Logo */}
-        <div className="flex justify-center mb-8">
-          <div className="w-16 h-16 bg-[#0F9D58] rounded-2xl flex items-center justify-center shadow-lg">
-            <span className="text-white font-bold text-2xl">H</span>
+        <div className="flex flex-col items-center mb-8 gap-3">
+          <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center shadow-lg">
+            {siteLogoUrl ? (
+              <img src={siteLogoUrl} alt={siteName} className="w-20 h-20 object-contain" />
+            ) : (
+              <span className="text-[#0F9D58] font-bold text-4xl">{siteName.charAt(0)}</span>
+            )}
           </div>
+          <span className="text-2xl font-bold text-[#0F9D58]">{siteName}</span>
         </div>
 
         {/* Header */}
