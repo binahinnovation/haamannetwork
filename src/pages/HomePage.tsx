@@ -295,7 +295,7 @@ const HomePage: React.FC = () => {
               {/* New Badge */}
               <div className="inline-flex items-center bg-white bg-opacity-20 backdrop-blur-sm rounded-full px-4 py-2 text-white">
                 <span className="bg-white text-[#0F9D58] px-2 py-1 rounded-full text-xs font-bold mr-3">New</span>
-                <span className="text-sm">Delivering Excellence Across Nigeria</span>
+                <span className="text-sm">Delivering Excellence Across Nigeria And beyond</span>
               </div>
 
               <div className="space-y-4 sm:space-y-6">
