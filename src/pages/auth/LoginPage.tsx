@@ -64,9 +64,7 @@ const LoginPage: React.FC = () => {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <div className="w-16 h-16 bg-[#0F9D58] rounded-2xl flex items-center justify-center shadow-lg">
-            <span className="text-white font-bold text-2xl">H</span>
-          </div>
+          <img src="/logos/arab_network.png" alt="App Logo" className="w-16 h-16 object-contain" />
         </div>
 
         {/* Header */}
