@@ -35,7 +35,7 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode, isDarkMode }) => {
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
               {siteLogoUrl ? (
-                <img src={siteLogoUrl} alt={siteName} className="w-10 h-10 object-contain" />
+                <img src={siteLogoUrl} alt={siteName} className="w-8 h-8 object-contain" />
               ) : (
                 <span className="text-[#0F9D58] font-bold text-xl">
                   {siteName.charAt(0)}
@@ -141,7 +141,7 @@ const Header: React.FC<HeaderProps> = ({ toggleDarkMode, isDarkMode }) => {
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-[#0F9D58] rounded-lg flex items-center justify-center">
             {siteLogoUrl ? (
-              <img src={siteLogoUrl} alt={siteName} className="w-8 h-8 object-contain" />
+              <img src={siteLogoUrl} alt={siteName} className="w-6 h-6 object-contain" />
             ) : (
               <span className="text-white font-bold text-lg">{siteName.charAt(0)}</span>
             )}

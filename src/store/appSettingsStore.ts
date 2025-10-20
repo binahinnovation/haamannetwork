@@ -16,7 +16,7 @@ type AppSettingsState = {
 
 export const useAppSettingsStore = create<AppSettingsState>((set) => ({
   siteName: 'Haaman Network', // Default fallback value
-  siteLogoUrl: '/logos/arab_network.png', // Default fallback value (served from public)
+  siteLogoUrl: 'https://images.pexels.com/photos/5632402/pexels-photo-5632402.jpeg', // Default fallback value
   appBaseUrl: 'https://haamannetwork.com', // Default fallback value
   footerPhone: '+234 907 599 2464', // Default fallback value
   footerEmail: 'support@haamannetwork.com', // Default fallback value
@@ -42,7 +42,7 @@ export const useAppSettingsStore = create<AppSettingsState>((set) => ({
 
       set({
         siteName: settings.site_name || 'Haaman Network',
-        siteLogoUrl: settings.site_logo_url || '/logos/arab_network.png',
+        siteLogoUrl: settings.site_logo_url || 'https://images.pexels.com/photos/5632402/pexels-photo-5632402.jpeg',
         appBaseUrl: settings.app_base_url || 'https://haamannetwork.com',
         footerPhone: settings.footer_phone || '+234 907 599 2464',
         footerEmail: settings.footer_email || 'support@haamannetwork.com',
