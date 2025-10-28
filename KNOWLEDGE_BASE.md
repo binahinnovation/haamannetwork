@@ -1,8 +1,8 @@
-# Haaman Network - Project Knowledge Base
+# ArabNetwork - Project Knowledge Base
 
 ## Project Overview
 
-**Haaman Network** is a comprehensive digital services and e-commerce platform built with React, TypeScript, and Supabase. It serves as a VTU (Virtual Top-Up) platform enabling users to purchase airtime, data bundles, pay utility bills, and shop for electronics and gadgets.
+**ArabNetwork** is a comprehensive digital services and e-commerce platform built with React, TypeScript, and Supabase. It serves as a VTU (Virtual Top-Up) platform enabling users to purchase airtime, data bundles, pay utility bills, and shop for electronics and gadgets.
 
 ### Tech Stack
 - **Frontend:** React 18 + TypeScript + Vite
@@ -430,4 +430,4 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 ---
 
-This knowledge base serves as a comprehensive reference for understanding, maintaining, and extending the Haaman Network platform. It should be updated as new features are added or architectural changes are made.
+This knowledge base serves as a comprehensive reference for understanding, maintaining, and extending the ArabNetwork platform. It should be updated as new features are added or architectural changes are made.

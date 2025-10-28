@@ -19,7 +19,7 @@ VALUES
   ('footer_phone', '+234 907 599 2464', 'Contact phone number displayed in footer', NULL),
   ('footer_email', 'support@haamannetwork.com', 'Contact email address displayed in footer', NULL),
   ('footer_address', 'Lagos, Nigeria', 'Business address displayed in footer', NULL),
-  ('footer_company_name', 'Haaman Network', 'Company name displayed in footer', NULL)
+  ('footer_company_name', 'ArabNetwork', 'Company name displayed in footer', NULL)
 ON CONFLICT (key) DO NOTHING;
 
 -- Ensure airtime provider setting exists with default 'maskawa'

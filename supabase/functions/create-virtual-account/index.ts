@@ -43,7 +43,7 @@ serve(async (req) => {
       .eq('key', 'site_name')
       .single();
 
-    const siteName = siteNameSetting?.value || 'Haaman Network';
+    const siteName = siteNameSetting?.value || 'ArabNetwork';
 
     // Generate a tx_ref to map webhook events to this user
     const txRef = `haaman-${userId}-${Date.now()}`;

@@ -86,7 +86,7 @@ const HomePage: React.FC = () => {
         setBannerSettings(prev => ({ 
           ...prev, 
           ...settings,
-          steps_title: settings.steps_title?.replace('Haaman Network', siteName) || `3 Simple Steps to Enjoy ${siteName}.`
+          steps_title: settings.steps_title?.replace('ArabNetwork', siteName) || `3 Simple Steps to Enjoy ${siteName}.`
         }));
       }
     } catch (error) {

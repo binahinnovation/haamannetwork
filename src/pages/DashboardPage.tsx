@@ -6,13 +6,10 @@ import {
   Zap, 
   Tv, 
   Gift, 
-  Ticket, 
   Users, 
   MoreHorizontal,
   Eye,
   EyeOff,
-  History,
-  Plus,
   ShoppingBag,
   BookOpen,
   Moon,
@@ -170,7 +167,7 @@ const DashboardPage: React.FC = () => {
     const status = getServiceStatus(service.id);
     return status !== 'disabled';
   }).map(service => {
-    if (service.id === 'more') return service; // Don't modify "More" option
+    if (service.id === 'more') return { ...service, comingSoon: false }; // Don't modify "More" option
     const status = getServiceStatus(service.id);
     return {
       ...service,
@@ -181,7 +178,7 @@ const DashboardPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 px-4 py-6">
+      <div className="bg-white dark:bg-gray-800 px-3 sm:px-4 py-4 sm:py-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <div className="w-10 sm:w-12 h-10 sm:h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
@@ -213,7 +210,7 @@ const DashboardPage: React.FC = () => {
 
         {/* Balance Card */}
         <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white p-4 sm:p-6 shadow-lg">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
               <span className="text-xs sm:text-sm opacity-90">Available Balance</span>
               <button 
@@ -227,37 +224,37 @@ const DashboardPage: React.FC = () => {
                 )}
               </button>
             </div>
-            <div className="flex items-center space-x-4">
-              <button 
-                onClick={() => navigate('/transactions')}
-                className="text-xs sm:text-sm opacity-90 hover:opacity-100 transition-opacity"
-              >
-                History →
-              </button>
-            </div>
+            <button 
+              onClick={() => navigate('/transactions')}
+              className="text-xs sm:text-sm opacity-90 hover:opacity-100 transition-opacity whitespace-nowrap"
+            >
+              History →
+            </button>
           </div>
           
-          <div className="flex items-center justify-between mt-4">
-            <div>
-              <p className="text-xl sm:text-3xl font-bold">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+            <div className="flex-1 min-w-0">
+              <p className="text-xl sm:text-3xl font-bold truncate">
                 {showBalance ? formatCurrency(user?.walletBalance || 0) : '****'}
               </p>
             </div>
             
-            <Button
-              onClick={() => navigate('/wallet/fund')}
-              className="bg-white text-green-600 hover:bg-gray-100 px-4 sm:px-6 py-2 rounded-full font-medium text-sm"
-            >
-              Add Money
-            </Button>
+            <div className="flex-shrink-0">
+              <Button
+                onClick={() => navigate('/wallet/fund')}
+                className="bg-white text-green-600 hover:bg-gray-100 px-3 sm:px-6 py-2 rounded-full font-medium text-xs sm:text-sm w-full sm:w-auto"
+              >
+                Add Money
+              </Button>
+            </div>
           </div>
         </Card>
       </div>
 
       {/* Services Grid */}
-      <div className="px-4 py-6">
+      <div className="px-3 sm:px-4 py-4 sm:py-6">
         {/* Main Services */}
-        <div className="grid grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <div className="grid grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-6 sm:mb-8">
           {filteredMainServices.map((service, index) => (
             <button
               key={index}
@@ -268,17 +265,19 @@ const DashboardPage: React.FC = () => {
                   navigate(service.path);
                 }
               }}
-              className="flex flex-col items-center space-y-2 sm:space-y-3 p-3 sm:p-4 rounded-2xl bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow relative"
+              className="flex flex-col items-center space-y-1 sm:space-y-2 md:space-y-3 p-2 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow relative min-h-[80px] sm:min-h-[90px] md:min-h-[100px]"
             >
               {service.comingSoon && (
-                <div className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold">
+                <div className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs px-1 sm:px-1.5 py-0.5 rounded-full font-bold">
                   Soon
                 </div>
               )}
-              <div className={`w-10 sm:w-12 h-10 sm:h-12 rounded-full flex items-center justify-center ${service.color}`}>
-                {service.icon}
+              <div className={`w-8 sm:w-10 md:w-12 h-8 sm:h-10 md:h-12 rounded-full flex items-center justify-center ${service.color} flex-shrink-0`}>
+                <div className="w-4 sm:w-5 md:w-6 h-4 sm:h-5 md:h-6">
+                  {service.icon}
+                </div>
               </div>
-              <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 text-center leading-tight">
+              <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 text-center leading-tight px-1 line-clamp-2">
                 {service.title}
               </span>
             </button>
@@ -286,7 +285,7 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* Secondary Services */}
-        <div className="grid grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <div className="grid grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-6 sm:mb-8">
           {filteredSecondaryServices.map((service, index) => (
             <button
               key={index}
@@ -297,17 +296,19 @@ const DashboardPage: React.FC = () => {
                   navigate(service.path);
                 }
               }}
-              className="flex flex-col items-center space-y-2 sm:space-y-3 p-3 sm:p-4 rounded-2xl bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow relative"
+              className="flex flex-col items-center space-y-1 sm:space-y-2 md:space-y-3 p-2 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow relative min-h-[80px] sm:min-h-[90px] md:min-h-[100px]"
             >
               {service.comingSoon && (
-                <div className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold">
+                <div className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs px-1 sm:px-1.5 py-0.5 rounded-full font-bold">
                   Soon
                 </div>
               )}
-              <div className={`w-10 sm:w-12 h-10 sm:h-12 rounded-full flex items-center justify-center ${service.color}`}>
-                {service.icon}
+              <div className={`w-8 sm:w-10 md:w-12 h-8 sm:h-10 md:h-12 rounded-full flex items-center justify-center ${service.color} flex-shrink-0`}>
+                <div className="w-4 sm:w-5 md:w-6 h-4 sm:h-5 md:h-6">
+                  {service.icon}
+                </div>
               </div>
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 text-center leading-tight px-1">
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 text-center leading-tight px-1 line-clamp-2">
                 {service.title}
               </span>
             </button>
@@ -330,25 +331,25 @@ const DashboardPage: React.FC = () => {
         {getServiceStatus('store') !== 'disabled' && (
           <div className="space-y-4 mb-6 sm:mb-8">
             {promotionalBanners.map((banner) => (
-              <Card key={banner.id} className={`${banner.bgColor} text-white p-4 sm:p-6 overflow-hidden relative`}>
+              <Card key={banner.id} className={`${banner.bgColor} text-white p-3 sm:p-4 md:p-6 overflow-hidden relative`}>
                 <div className="flex items-center justify-between">
-                  <div className="flex-1 pr-4">
-                    <h3 className="text-base sm:text-lg font-bold mb-2">{banner.title}</h3>
-                    <p className="text-sm opacity-90 mb-4 leading-relaxed">
+                  <div className="flex-1 pr-2 sm:pr-4 min-w-0">
+                    <h3 className="text-sm sm:text-base md:text-lg font-bold mb-1 sm:mb-2 line-clamp-1">{banner.title}</h3>
+                    <p className="text-xs sm:text-sm opacity-90 mb-3 sm:mb-4 leading-relaxed line-clamp-2">
                       {banner.subtitle}
                     </p>
                     
-                    <div className="flex space-x-3">
+                    <div className="flex space-x-2 sm:space-x-3">
                       <button 
                         onClick={() => navigate('/store')}
-                        className="bg-white bg-opacity-20 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-medium hover:bg-opacity-30 transition-all"
+                        className="bg-white bg-opacity-20 backdrop-blur-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium hover:bg-opacity-30 transition-all whitespace-nowrap"
                       >
                         📱 {banner.buttonText}
                       </button>
                     </div>
                   </div>
                   
-                  <div className="w-20 sm:w-24 h-20 sm:h-24 rounded-2xl overflow-hidden flex-shrink-0">
+                  <div className="w-16 sm:w-20 md:w-24 h-16 sm:h-20 md:h-24 rounded-xl sm:rounded-2xl overflow-hidden flex-shrink-0">
                     <img
                       src={banner.image}
                       alt={banner.title}
@@ -362,19 +363,19 @@ const DashboardPage: React.FC = () => {
         )}
 
         {/* Quick Actions */}
-        <div className="mt-8 grid grid-cols-4 gap-3 sm:gap-4">
+        <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
           {getServiceStatus('store') !== 'disabled' && (
             <Card 
-              className="p-3 sm:p-4 bg-white dark:bg-gray-800 cursor-pointer hover:shadow-md transition-shadow"
+              className="p-2 sm:p-3 md:p-4 bg-white dark:bg-gray-800 cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => navigate('/store')}
             >
-              <div className="flex flex-col items-center space-y-2 sm:space-y-3">
-                <div className="w-8 sm:w-10 h-8 sm:h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <ShoppingBag size={16} className="text-green-600" />
+              <div className="flex flex-col items-center space-y-1 sm:space-y-2 md:space-y-3">
+                <div className="w-8 sm:w-10 h-8 sm:h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <ShoppingBag size={14} className="text-green-600 sm:w-4 sm:h-4" />
                 </div>
-                <div className="text-center">
-                  <p className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm">Shop</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Browse products</p>
+                <div className="text-center min-w-0 w-full">
+                  <p className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm truncate">Shop</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">Browse products</p>
                 </div>
               </div>
             </Card>
@@ -382,19 +383,19 @@ const DashboardPage: React.FC = () => {
 
           {getServiceStatus('waec') === 'coming_soon' && (
             <Card 
-              className="p-3 sm:p-4 bg-white dark:bg-gray-800 cursor-pointer hover:shadow-md transition-shadow relative"
+              className="p-2 sm:p-3 md:p-4 bg-white dark:bg-gray-800 cursor-pointer hover:shadow-md transition-shadow relative"
               onClick={() => handleComingSoonNavigation('Education Services', 'Access educational services, course payments, and academic resources')}
             >
-              <div className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold">
+              <div className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs px-1 sm:px-1.5 py-0.5 rounded-full font-bold">
                 Soon
               </div>
-              <div className="flex flex-col items-center space-y-2 sm:space-y-3">
-                <div className="w-8 sm:w-10 h-8 sm:h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                  <BookOpen size={16} className="text-purple-600" />
+              <div className="flex flex-col items-center space-y-1 sm:space-y-2 md:space-y-3">
+                <div className="w-8 sm:w-10 h-8 sm:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <BookOpen size={14} className="text-purple-600 sm:w-4 sm:h-4" />
                 </div>
-                <div className="text-center">
-                  <p className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm">Education</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">WAEC & more</p>
+                <div className="text-center min-w-0 w-full">
+                  <p className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm truncate">Education</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">WAEC & more</p>
                 </div>
               </div>
             </Card>
@@ -402,16 +403,16 @@ const DashboardPage: React.FC = () => {
 
           {getServiceStatus('store') !== 'disabled' && (
             <Card 
-              className="p-3 sm:p-4 bg-white dark:bg-gray-800 cursor-pointer hover:shadow-md transition-shadow"
+              className="p-2 sm:p-3 md:p-4 bg-white dark:bg-gray-800 cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => navigate('/store/orders')}
             >
-              <div className="flex flex-col items-center space-y-2 sm:space-y-3">
-                <div className="w-8 sm:w-10 h-8 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Package size={16} className="text-blue-600" />
+              <div className="flex flex-col items-center space-y-1 sm:space-y-2 md:space-y-3">
+                <div className="w-8 sm:w-10 h-8 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Package size={14} className="text-blue-600 sm:w-4 sm:h-4" />
                 </div>
-                <div className="text-center">
-                  <p className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm">Orders</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Track orders</p>
+                <div className="text-center min-w-0 w-full">
+                  <p className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm truncate">Orders</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">Track orders</p>
                 </div>
               </div>
             </Card>
@@ -419,16 +420,16 @@ const DashboardPage: React.FC = () => {
 
           {getServiceStatus('support') !== 'disabled' && (
             <Card 
-              className="p-3 sm:p-4 bg-white dark:bg-gray-800 cursor-pointer hover:shadow-md transition-shadow"
+              className="p-2 sm:p-3 md:p-4 bg-white dark:bg-gray-800 cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => navigate('/support')}
             >
-              <div className="flex flex-col items-center space-y-2 sm:space-y-3">
-                <div className="w-8 sm:w-10 h-8 sm:h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                  <MessageCircle size={16} className="text-orange-600" />
+              <div className="flex flex-col items-center space-y-1 sm:space-y-2 md:space-y-3">
+                <div className="w-8 sm:w-10 h-8 sm:h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <MessageCircle size={14} className="text-orange-600 sm:w-4 sm:h-4" />
                 </div>
-                <div className="text-center">
-                  <p className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm">Support</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Get help</p>
+                <div className="text-center min-w-0 w-full">
+                  <p className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm truncate">Support</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">Get help</p>
                 </div>
               </div>
             </Card>

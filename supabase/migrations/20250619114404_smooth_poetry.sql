@@ -187,7 +187,7 @@ CREATE INDEX IF NOT EXISTS admin_logs_created_at_idx ON admin_logs(created_at);
 -- Insert default admin settings
 INSERT INTO admin_settings (key, value, description) VALUES
   ('referral_bonus_percentage', '6', 'Percentage bonus for referrals'),
-  ('site_name', 'Haaman Network', 'Website name'),
+  ('site_name', 'ArabNetwork', 'Website name'),
   ('support_email', 'support@haamannetwork.com', 'Support email address'),
   ('support_phone', '+234 907 599 2464', 'Support phone number'),
   ('maintenance_mode', 'false', 'Enable/disable maintenance mode'),

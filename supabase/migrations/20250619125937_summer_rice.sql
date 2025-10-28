@@ -16,5 +16,5 @@ INSERT INTO admin_settings (key, value, description) VALUES
   ('footer_phone', '+234 907 599 2464', 'Phone number displayed in footer'),
   ('footer_email', 'support@haamannetwork.com', 'Email address displayed in footer'),
   ('footer_address', 'Lagos, Nigeria', 'Address displayed in footer'),
-  ('footer_company_name', 'Haaman Network', 'Company name displayed in footer')
+  ('footer_company_name', 'ArabNetwork', 'Company name displayed in footer')
 ON CONFLICT (key) DO NOTHING;

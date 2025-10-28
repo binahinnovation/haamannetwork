@@ -430,7 +430,7 @@ const OrdersManagement: React.FC = () => {
       // Add title
       doc.setFontSize(18);
       doc.setTextColor(15, 157, 88); // Primary color #0F9D58
-      doc.text('Haaman Network - Orders Report', 105, 15, { align: 'center' });
+      doc.text('ArabNetwork - Orders Report', 105, 15, { align: 'center' });
       
       // Add filters info
       doc.setFontSize(10);

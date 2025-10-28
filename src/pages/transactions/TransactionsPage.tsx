@@ -143,7 +143,7 @@ const downloadReceipt = (transaction: any) => {
   // Add logo (using text as placeholder)
   doc.setFontSize(24);
   doc.setTextColor(15, 157, 88); // Primary color #0F9D58
-  doc.text('HAAMAN NETWORK', 105, 20, { align: 'center' });
+  doc.text('ARABNETWORK', 105, 20, { align: 'center' });
   
   doc.setFontSize(12);
   doc.setTextColor(100);
@@ -182,7 +182,7 @@ const downloadReceipt = (transaction: any) => {
   // Footer
   doc.setFontSize(10);
   doc.setTextColor(100);
-  doc.text('Thank you for choosing Haaman Network!', 105, 120, { align: 'center' });
+  doc.text('Thank you for choosing ArabNetwork!', 105, 120, { align: 'center' });
   
   // Save the PDF
   doc.save(`receipt-${transaction.reference || transaction.id}.pdf`);
