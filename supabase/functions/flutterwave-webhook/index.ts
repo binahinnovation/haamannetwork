@@ -198,6 +198,11 @@ serve(async (req) => {
     // Update user's wallet balance
     const newBalance = parseFloat(userProfile.wallet_balance) + amountToCredit;
     
+    console.log(`Updating wallet balance for user ${userProfile.id}:`);
+    console.log(`Previous balance: ${userProfile.wallet_balance}`);
+    console.log(`Amount to credit: ${amountToCredit}`);
+    console.log(`New balance: ${newBalance}`);
+    
     const { error: updateError } = await supabase
       .from("profiles")
       .update({ wallet_balance: newBalance })
@@ -207,6 +212,8 @@ serve(async (req) => {
       console.error("Error updating wallet balance:", updateError);
       throw new Error("Failed to update wallet balance");
     }
+
+    console.log("Wallet balance updated successfully");
 
     // Create a transaction record
     const transactionData = {

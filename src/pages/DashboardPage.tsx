@@ -15,7 +15,8 @@ import {
   Moon,
   Sun,
   Package,
-  MessageCircle
+  MessageCircle,
+  RefreshCw
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useServiceConfigStore } from '../store/serviceConfigStore';
@@ -26,9 +27,10 @@ import { formatCurrency } from '../lib/utils';
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, refreshUserData } = useAuthStore();
   const { config: serviceConfig, fetchConfig } = useServiceConfigStore();
   const [showBalance, setShowBalance] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return document.documentElement.classList.contains('dark');
   });
@@ -47,6 +49,54 @@ const DashboardPage: React.FC = () => {
 
   const toggleBalanceVisibility = () => {
     setShowBalance(!showBalance);
+  };
+
+  const handleRefreshBalance = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshUserData();
+    } catch (error) {
+      console.error('Error refreshing balance:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Debug function to test wallet update (only for development)
+  const testWalletUpdate = async () => {
+    if (!user) return;
+    
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl) {
+        throw new Error('Supabase URL not configured');
+      }
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/test-wallet-update`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          amount: 100 // Test with 100 naira
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('Test wallet update successful:', result);
+        alert('Test wallet update successful! Check console for details.');
+      } else {
+        console.error('Test wallet update failed:', result);
+        alert('Test wallet update failed: ' + result.error);
+      }
+    } catch (error: any) {
+      console.error('Error testing wallet update:', error);
+      alert('Error testing wallet update: ' + (error?.message || 'Unknown error'));
+    }
   };
 
   const toggleTheme = () => {
@@ -223,6 +273,14 @@ const DashboardPage: React.FC = () => {
                   <EyeOff size={14} />
                 )}
               </button>
+              <button 
+                onClick={handleRefreshBalance}
+                disabled={isRefreshing}
+                className="opacity-75 hover:opacity-100 transition-opacity disabled:opacity-50"
+                title="Refresh balance"
+              >
+                <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+              </button>
             </div>
             <button 
               onClick={() => navigate('/transactions')}
@@ -239,13 +297,23 @@ const DashboardPage: React.FC = () => {
               </p>
             </div>
             
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 flex gap-2">
               <Button
                 onClick={() => navigate('/wallet/fund')}
-                className="bg-white text-green-600 hover:bg-gray-100 px-3 sm:px-6 py-2 rounded-full font-medium text-xs sm:text-sm w-full sm:w-auto"
+                className="bg-white text-green-600 hover:bg-gray-100 px-3 sm:px-6 py-2 rounded-full font-medium text-xs sm:text-sm"
               >
                 Add Money
               </Button>
+              {/* Debug button - only show in development */}
+              {import.meta.env.DEV && (
+                <Button
+                  onClick={testWalletUpdate}
+                  className="bg-yellow-500 text-white hover:bg-yellow-600 px-2 sm:px-3 py-2 rounded-full font-medium text-xs"
+                  title="Test wallet update (Dev only)"
+                >
+                  Test
+                </Button>
+              )}
             </div>
           </div>
         </Card>

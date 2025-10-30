@@ -25,7 +25,7 @@ type AuthState = {
   verifyTransactionPin: (pin: string) => Promise<boolean>;
   checkPinStatus: () => Promise<{hasPin: boolean, isLocked: boolean, lockedUntil: string | null}>;
   resetTransactionPin: () => Promise<void>;
-  resetTransactionPinForAdmin: (userId: string) => Promise<void>;
+  resetTransactionPinForAdmin: (userId: string) => Promise<{ success: boolean }>;
 };
 
 // Function to generate a random alphanumeric string for referral codes
@@ -687,7 +687,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           // Subscribe to changes in the profiles table for the current user
           const subscription = supabase
-            .channel('profile-changes')
+            .channel(`profile-changes-${state.user.id}`)
             .on(
               'postgres_changes',
               {
@@ -697,18 +697,23 @@ export const useAuthStore = create<AuthState>()(
                 filter: `id=eq.${state.user.id}`,
               },
               (payload) => {
+                console.log('Real-time profile update received:', payload);
+                
                 // Update the user's wallet balance in the local state
                 if (payload.new && payload.new.wallet_balance !== undefined) {
+                  const newBalance = parseFloat(payload.new.wallet_balance);
+                  console.log('Updating wallet balance from', state.user?.walletBalance, 'to', newBalance);
+                  
                   set((state) => ({
                     user: state.user ? {
                       ...state.user,
-                      walletBalance: payload.new.wallet_balance,
+                      walletBalance: newBalance,
                       // Also update referral stats if they've changed
                       totalReferrals: payload.new.total_referrals !== undefined ? 
                         payload.new.total_referrals : 
                         state.user?.totalReferrals || 0,
                       referralEarnings: payload.new.referral_earnings !== undefined ? 
-                        payload.new.referral_earnings : 
+                        parseFloat(payload.new.referral_earnings) : 
                         state.user?.referralEarnings || 0,
                     } : null,
                   }));
@@ -725,7 +730,7 @@ export const useAuthStore = create<AuthState>()(
                         payload.new.total_referrals : 
                         state.user?.totalReferrals || 0,
                       referralEarnings: payload.new.referral_earnings !== undefined ? 
-                        payload.new.referral_earnings : 
+                        parseFloat(payload.new.referral_earnings) : 
                         state.user?.referralEarnings || 0,
                     } : null,
                   }));
@@ -740,12 +745,34 @@ export const useAuthStore = create<AuthState>()(
                     } : null,
                   }));
                 }
+
+                // Update virtual account info if it's changed
+                if (payload.new && (
+                  payload.new.virtual_account_number !== undefined ||
+                  payload.new.virtual_account_bank_name !== undefined ||
+                  payload.new.virtual_account_reference !== undefined ||
+                  payload.new.bvn !== undefined
+                )) {
+                  set((state) => ({
+                    user: state.user ? {
+                      ...state.user,
+                      virtualAccountNumber: payload.new.virtual_account_number || state.user?.virtualAccountNumber,
+                      virtualAccountBankName: payload.new.virtual_account_bank_name || state.user?.virtualAccountBankName,
+                      virtualAccountReference: payload.new.virtual_account_reference || state.user?.virtualAccountReference,
+                      bvn: payload.new.bvn !== undefined ? payload.new.bvn : state.user?.bvn,
+                    } : null,
+                  }));
+                }
               }
             )
-            .subscribe();
+            .subscribe((status) => {
+              console.log('Real-time subscription status:', status);
+            });
           
           // Store the subscription for later cleanup
           set({ realtimeSubscription: subscription });
+          
+          console.log('Real-time subscription initialized for user:', state.user.id);
           
         } catch (error) {
           console.error('Error setting up realtime subscription:', error);
