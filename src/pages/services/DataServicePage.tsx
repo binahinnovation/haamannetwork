@@ -4,7 +4,7 @@ import { Zap, ArrowLeft, CheckCircle, XCircle, User, Search, Filter, Star, Downl
 import { supabase } from '../../lib/supabase';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import Badge from '../../components/ui/Badge';
+
 import { useAuthStore } from '../../store/authStore';
 import { serviceAPI } from '../../lib/serviceApi';
 import { formatCurrency } from '../../lib/utils';
@@ -733,41 +733,42 @@ const DataServicePage: React.FC = () => {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0F9D58]"></div>
               </div>
             ) : filteredPlans.length > 0 ? (
-              <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto pr-1">
                 {filteredPlans.map((plan) => (
                   <button
                     key={plan.id}
                     onClick={() => setSelectedPlan(plan)}
-                    className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${
+                    className={`relative p-4 rounded-xl border-2 transition-all text-center ${
                       selectedPlan?.id === plan.id
                         ? 'border-[#0F9D58] bg-[#0F9D58]/5'
-                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
+                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-[#0F9D58]/30'
                     }`}
                   >
-                    <div className="flex-1 text-left">
-                      <div className="flex items-center">
-                        <p className="font-medium text-gray-900 dark:text-white">{plan.size}</p>
-                        {plan.is_popular && (
-                          <Badge className="ml-2 bg-yellow-100 text-yellow-800 text-xs">Popular</Badge>
-                        )}
-                        {plan.show_discount_badge && plan.discount_percentage > 0 && (
-                          <Badge className="ml-2 bg-red-500 text-white text-xs font-bold">
-                            -{plan.discount_percentage}% OFF
-                          </Badge>
-                        )}
+                    {/* Badges */}
+                    {plan.is_popular && (
+                      <div className="absolute -top-2 -left-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center">
+                        <Star size={10} className="mr-1 fill-current" />
+                        HOT
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{plan.validity}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{plan.description}</p>
-                    </div>
-                    <div className="text-right ml-4">
-                      <div className="flex flex-col items-end">
-                        {plan.show_discount_badge && plan.discount_percentage > 0 && (
-                          <span className="inline-flex px-2 py-1 text-xs font-bold rounded-full bg-red-500 text-white mb-1">
-                            -{plan.discount_percentage}% OFF
-                          </span>
-                        )}
-                        <p className="font-bold text-[#0F9D58]">{formatCurrency(plan.selling_price)}</p>
+                    )}
+                    {plan.show_discount_badge && plan.discount_percentage > 0 && (
+                      <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                        -{plan.discount_percentage}%
                       </div>
+                    )}
+                    
+                    {/* Plan Content */}
+                    <div className="space-y-2">
+                      <h4 className="text-lg font-bold text-gray-900 dark:text-white">{plan.size}</h4>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{plan.validity}</p>
+                      <p className="text-2xl font-bold text-[#0F9D58]">{formatCurrency(plan.selling_price)}</p>
+                      
+                      {/* Show cashback info if available in description */}
+                      {plan.description.toLowerCase().includes('cashback') && (
+                        <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                          {plan.description.match(/\w+\d+\s*Cashback/i)?.[0] || ''}
+                        </p>
+                      )}
                     </div>
                   </button>
                 ))}
