@@ -733,12 +733,12 @@ const DataServicePage: React.FC = () => {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0F9D58]"></div>
               </div>
             ) : filteredPlans.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-96 overflow-y-auto pr-1">
                 {filteredPlans.map((plan) => (
                   <button
                     key={plan.id}
                     onClick={() => setSelectedPlan(plan)}
-                    className={`relative p-4 rounded-xl border-2 transition-all text-center ${
+                    className={`relative p-3 rounded-xl border-2 transition-all text-center ${
                       selectedPlan?.id === plan.id
                         ? 'border-[#0F9D58] bg-[#0F9D58]/5'
                         : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-[#0F9D58]/30'
@@ -746,22 +746,22 @@ const DataServicePage: React.FC = () => {
                   >
                     {/* Badges */}
                     {plan.is_popular && (
-                      <div className="absolute -top-2 -left-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center">
-                        <Star size={10} className="mr-1 fill-current" />
+                      <div className="absolute -top-1 -left-1 bg-yellow-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full flex items-center">
+                        <Star size={8} className="mr-0.5 fill-current" />
                         HOT
                       </div>
                     )}
                     {plan.show_discount_badge && plan.discount_percentage > 0 && (
-                      <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
                         -{plan.discount_percentage}%
                       </div>
                     )}
                     
                     {/* Plan Content */}
-                    <div className="space-y-2">
-                      <h4 className="text-lg font-bold text-gray-900 dark:text-white">{plan.size}</h4>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{plan.validity}</p>
-                      <p className="text-2xl font-bold text-[#0F9D58]">{formatCurrency(plan.selling_price)}</p>
+                    <div className="space-y-1">
+                      <h4 className="text-base md:text-lg font-bold text-gray-900 dark:text-white">{plan.size}</h4>
+                      <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">{plan.validity}</p>
+                      <p className="text-lg md:text-xl font-bold text-[#0F9D58]">{formatCurrency(plan.selling_price)}</p>
                       
                       {/* Show cashback info if available in description */}
                       {plan.description.toLowerCase().includes('cashback') && (
