@@ -389,10 +389,10 @@ const DashboardPage: React.FC = () => {
               </p>
             </div>
             
-            <div className="flex-shrink-0 flex gap-2">
+            <div className="w-full sm:w-auto flex-shrink-0 flex gap-2">
               <Button
                 onClick={() => navigate('/wallet/fund')}
-                className="bg-white text-green-600 hover:bg-gray-100 px-3 sm:px-6 py-2 rounded-full font-medium text-xs sm:text-sm"
+                className="flex-1 sm:flex-none bg-white text-green-600 hover:bg-gray-100 px-3 sm:px-6 py-2 rounded-full font-medium text-xs sm:text-sm"
               >
                 Add Money
               </Button>
