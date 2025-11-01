@@ -760,6 +760,7 @@ const DataServicePage: React.FC = () => {
                     {/* Plan Content */}
                     <div className="space-y-1">
                       <h4 className="text-base md:text-lg font-bold text-gray-900 dark:text-white">{plan.size}</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{plan.plan_type}</p>
                       <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">{plan.validity}</p>
                       <p className="text-lg md:text-xl font-bold text-[#0F9D58]">{formatCurrency(plan.selling_price)}</p>
                       
