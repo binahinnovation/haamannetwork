@@ -99,6 +99,98 @@ const DashboardPage: React.FC = () => {
     }
   };
 
+  // Debug function to diagnose wallet issues
+  const debugWalletIssue = async () => {
+    if (!user) return;
+    
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl) {
+        throw new Error('Supabase URL not configured');
+      }
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/debug-wallet-issue`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          userId: user.id
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('Wallet diagnostics:', result.diagnostics);
+        
+        const diagnostics = result.diagnostics;
+        let message = `Wallet Diagnostics for ${diagnostics.user.name}:\n\n`;
+        message += `Current Balance: ₦${diagnostics.user.current_balance}\n`;
+        message += `Expected Balance: ₦${diagnostics.balance_analysis.calculated_balance_all_transactions}\n`;
+        message += `Discrepancy: ₦${diagnostics.balance_analysis.discrepancy}\n\n`;
+        
+        if (diagnostics.recommendations.length > 0) {
+          message += `Recommendations:\n${diagnostics.recommendations.join('\n')}\n\n`;
+        }
+        
+        message += 'Check browser console for detailed diagnostics.';
+        alert(message);
+      } else {
+        console.error('Wallet diagnostics failed:', result);
+        alert('Wallet diagnostics failed: ' + result.error);
+      }
+    } catch (error: any) {
+      console.error('Error running wallet diagnostics:', error);
+      alert('Error running wallet diagnostics: ' + (error?.message || 'Unknown error'));
+    }
+  };
+
+  // Function to fix wallet balance based on transaction history
+  const fixWalletBalance = async () => {
+    if (!user) return;
+    
+    if (!confirm('This will recalculate your wallet balance based on transaction history. Continue?')) {
+      return;
+    }
+    
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl) {
+        throw new Error('Supabase URL not configured');
+      }
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/fix-wallet-balance`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          action: 'calculate_correct_balance'
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('Wallet balance fixed:', result.data);
+        alert(`Wallet balance corrected!\nPrevious: ₦${result.data.previous_balance}\nCorrected: ₦${result.data.corrected_balance}\nDifference: ₦${result.data.correction_amount}`);
+        
+        // Refresh user data to show updated balance
+        await refreshUserData();
+      } else {
+        console.error('Wallet balance fix failed:', result);
+        alert('Wallet balance fix failed: ' + result.error);
+      }
+    } catch (error: any) {
+      console.error('Error fixing wallet balance:', error);
+      alert('Error fixing wallet balance: ' + (error?.message || 'Unknown error'));
+    }
+  };
+
   const toggleTheme = () => {
     const newMode = !isDarkMode;
     setIsDarkMode(newMode);
@@ -304,15 +396,31 @@ const DashboardPage: React.FC = () => {
               >
                 Add Money
               </Button>
-              {/* Debug button - only show in development */}
+              {/* Debug buttons - only show in development */}
               {import.meta.env.DEV && (
-                <Button
-                  onClick={testWalletUpdate}
-                  className="bg-yellow-500 text-white hover:bg-yellow-600 px-2 sm:px-3 py-2 rounded-full font-medium text-xs"
-                  title="Test wallet update (Dev only)"
-                >
-                  Test
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    onClick={testWalletUpdate}
+                    className="bg-yellow-500 text-white hover:bg-yellow-600 px-2 py-2 rounded-full font-medium text-xs"
+                    title="Test wallet update (Dev only)"
+                  >
+                    Test
+                  </Button>
+                  <Button
+                    onClick={debugWalletIssue}
+                    className="bg-red-500 text-white hover:bg-red-600 px-2 py-2 rounded-full font-medium text-xs"
+                    title="Debug wallet issue (Dev only)"
+                  >
+                    Debug
+                  </Button>
+                  <Button
+                    onClick={fixWalletBalance}
+                    className="bg-blue-500 text-white hover:bg-blue-600 px-2 py-2 rounded-full font-medium text-xs"
+                    title="Fix wallet balance (Dev only)"
+                  >
+                    Fix
+                  </Button>
+                </div>
               )}
             </div>
           </div>
