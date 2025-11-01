@@ -1182,7 +1182,8 @@ const DataPlansManagement: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
                   >
                     <option value="smeplug">SME Plug</option>
-                    <option value="maskawa">Maskawa</option>
+                    {/* MASKAWA option hidden but kept for future use */}
+                    {/* <option value="maskawa">MASKAWA</option> */}
                   </select>
                 </div>
                 <div></div>
@@ -1391,7 +1392,8 @@ const DataPlansManagement: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
                 >
                   <option value="smeplug">SME Plug</option>
-                  <option value="maskawa">Maskawa</option>
+                  {/* MASKAWA option hidden but kept for future use */}
+                  {/* <option value="maskawa">MASKAWA</option> */}
                 </select>
               </div>
 

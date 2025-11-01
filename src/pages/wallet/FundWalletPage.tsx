@@ -192,8 +192,14 @@ const FundWalletPage: React.FC = () => {
                 <div className="mb-4">
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Account Name</p>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {siteName} - {user.name}
+                    ArabNetwork - {user.name}
                   </p>
+                  {/* Debug info - remove in production */}
+                  {import.meta.env.DEV && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Debug: siteName = "{siteName}" | Forced: ArabNetwork
+                    </p>
+                  )}
                 </div>
 
                 <div>

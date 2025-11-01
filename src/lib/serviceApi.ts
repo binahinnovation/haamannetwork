@@ -28,8 +28,8 @@ class ServiceAPI {
   ): Promise<ServiceTransaction> {
     const reference = generateTransactionReference();
 
-    // Determine airtime provider from admin settings (default: maskawa)
-    let airtimeProvider: 'maskawa' | 'smeplug' = 'maskawa';
+    // Determine airtime provider from admin settings (default: smeplug)
+    let airtimeProvider: 'maskawa' | 'smeplug' = 'smeplug';
     try {
       const { data: providerSetting } = await supabase
         .from('admin_settings')
@@ -53,7 +53,7 @@ class ServiceAPI {
       details: {
         network: data.network,
         phone: data.phoneNumber,
-        service_provider: airtimeProvider,
+        service_provider: airtimeProvider, // Now defaults to SME Plug
       },
     };
 

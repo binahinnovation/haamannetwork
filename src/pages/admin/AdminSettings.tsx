@@ -21,14 +21,12 @@ import {
   CreditCard,
   Lock,
   Users,
-  ToggleLeft,
   ToggleRight,
   DollarSign,
   Wifi,
   Zap,
   Tv,
   BookOpen,
-  Ticket,
   ShoppingBag,
   MessageCircle,
   Link
@@ -115,8 +113,8 @@ const AdminSettings: React.FC = () => {
     const requiredSettings = [
       {
         key: 'airtime_provider',
-        value: 'maskawa',
-        description: 'Default airtime provider (maskawa or smeplug). Maskawa is the default.'
+        value: 'smeplug',
+        description: 'Default airtime provider (smeplug). SME Plug is now the default for all airtime purchases.'
       },
       {
         key: 'referral_reward_enabled',
@@ -238,19 +236,22 @@ const AdminSettings: React.FC = () => {
     ];
 
     try {
-      // Ensure essential API settings exist so inputs are always visible
-      const requiredApiSettings = [
-        {
-          key_name: 'maskawa_token',
-          key_value: 'YOUR_MASKAWA_TOKEN_HERE',
-          description: 'MASKAWA API token used by maskawa-proxy edge function'
-        },
-        {
-          key_name: 'maskawa_base_url',
-          key_value: 'https://maskawasubapi.com',
-          description: 'MASKAWA API base URL'
-        }
-      ];
+      // MASKAWA API settings commented out but kept for future use
+      // const requiredApiSettings = [
+      //   {
+      //     key_name: 'maskawa_token',
+      //     key_value: 'YOUR_MASKAWA_TOKEN_HERE',
+      //     description: 'MASKAWA API token used by maskawa-proxy edge function'
+      //   },
+      //   {
+      //     key_name: 'maskawa_base_url',
+      //     key_value: 'https://maskawasubapi.com',
+      //     description: 'MASKAWA API base URL'
+      //   }
+      // ];
+
+      // For now, no additional API settings needed since we're using SME Plug
+      const requiredApiSettings: any[] = [];
 
       const { error: apiEnsureError } = await supabase
         .from('api_settings')
@@ -477,8 +478,9 @@ const AdminSettings: React.FC = () => {
   };
 
   const settingCategories = {
-    'API Configuration': ['maskawa_token', 'maskawa_base_url', 'flutterwave_public_key', 'flutterwave_encryption_key'],
+    'API Configuration': [/* 'maskawa_token', 'maskawa_base_url', */ 'flutterwave_public_key', 'flutterwave_encryption_key'],
     'Service Providers': ['airtime_provider'],
+    'SME Plug Configuration': [], // SME Plug token is configured in Supabase Edge Function secrets
     'General': ['site_name', 'site_logo_url', 'app_base_url', 'support_email', 'support_phone'],
     'Footer Information': ['footer_company_name', 'footer_email', 'footer_phone', 'footer_address'],
     'Homepage Banners': ['hero_banner_image', 'hero_banner_image_alt', 'steps_banner_image'],
@@ -625,7 +627,7 @@ const AdminSettings: React.FC = () => {
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{category}</h2>
                 {category === 'API Configuration' && (
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    Configure MASKAWASUBAPI and Flutterwave integration settings for services
+                    Configure SME Plug and Flutterwave integration settings for services
                   </p>
                 )}
                 {category === 'General' && (
@@ -647,6 +649,22 @@ const AdminSettings: React.FC = () => {
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     Configure charges applied to wallet funding transactions
                   </p>
+                )}
+                {category === 'Service Providers' && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Configure which service providers to use for different services. Currently using SME Plug for airtime and data.
+                  </p>
+                )}
+                {category === 'SME Plug Configuration' && (
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                    <h4 className="font-medium text-green-900 dark:text-green-100 text-sm mb-2">
+                      SME Plug API Configuration
+                    </h4>
+                    <p className="text-sm text-green-800 dark:text-green-200">
+                      SME Plug API token is configured in Supabase Edge Function environment variables. 
+                      Contact your developer to update the <code className="bg-green-100 dark:bg-green-800 px-1 rounded">VITE_SME_PLUG_TOKEN</code> secret.
+                    </p>
+                  </div>
                 )}
               </div>
               
@@ -670,14 +688,20 @@ const AdminSettings: React.FC = () => {
                         </p>
                         
                         {setting.key === 'airtime_provider' ? (
-                          <select
-                            value={formData[key] || setting.value}
-                            onChange={(e) => handleChange(key, e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
-                          >
-                            <option value="maskawa">Maskawa (Default)</option>
-                            <option value="smeplug">SME Plug</option>
-                          </select>
+                          <div className="space-y-2">
+                            <select
+                              value={formData[key] || setting.value}
+                              onChange={(e) => handleChange(key, e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
+                            >
+                              <option value="smeplug">SME Plug (Default)</option>
+                              {/* MASKAWA option hidden but kept for future use */}
+                              {/* <option value="maskawa">MASKAWA</option> */}
+                            </select>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Currently using SME Plug for all airtime purchases
+                            </p>
+                          </div>
                         ) : setting.key === 'maintenance_mode' || 
                           setting.key === 'download_app_enabled' || 
                           setting.key === 'referral_reward_enabled' ||
@@ -970,10 +994,11 @@ const AdminSettings: React.FC = () => {
             API Integration Information
           </h3>
           <div className="space-y-3 text-sm text-blue-800 dark:text-blue-200">
-            <p>• <strong>MASKAWA Token:</strong> Required for airtime, data, and electricity bill payments</p>
+            <p>• <strong>SME Plug API:</strong> Used for airtime and data bundle purchases</p>
+            <p>• <strong>MASKAWA API:</strong> Used only for electricity bill payments (SME Plug doesn't support electricity)</p>
             <p>• <strong>Flutterwave Keys:</strong> Required for virtual account creation and payment processing</p>
-            <p>• <strong>Security:</strong> API tokens are encrypted and only accessible to admin users</p>
-            <p>• <strong>Important Note:</strong> The Flutterwave Secret Key is not stored here and must be set in your Supabase Edge Function environment variables</p>
+            <p>• <strong>Security:</strong> API tokens are stored securely in Supabase Edge Function environment variables</p>
+            <p>• <strong>Important Note:</strong> SME Plug and Flutterwave tokens must be set in your Supabase Edge Function secrets</p>
           </div>
         </div>
       </div>
