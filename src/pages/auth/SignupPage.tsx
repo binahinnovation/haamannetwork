@@ -98,7 +98,9 @@ const SignupPage: React.FC = () => {
       newErrors.email = 'Please enter a valid email address';
     }
 
-    if (formData.phone && !/^(\+234|0)[789]\d{9}$/.test(formData.phone.replace(/\s/g, ''))) {
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Phone number is required';
+    } else if (!/^(\+234|0)[789]\d{9}$/.test(formData.phone.replace(/\s/g, ''))) {
       newErrors.phone = 'Please enter a valid Nigerian phone number';
     }
 
@@ -163,6 +165,11 @@ const SignupPage: React.FC = () => {
         setErrors({ 
           referralCode: 'Invalid referral code. Please check and try again.',
           general: 'Invalid referral code. Please check and try again.'
+        });
+      } else if (error.message?.includes('phone number is already registered')) {
+        setErrors({ 
+          phone: 'This phone number is already registered. Please use a different phone number.',
+          general: 'This phone number is already registered. Please use a different phone number.'
         });
       } else {
         setErrors({ general: error.message || 'An error occurred during signup. Please try again.' });
@@ -276,12 +283,13 @@ const SignupPage: React.FC = () => {
             {/* Phone Field */}
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                Phone Number <span className="text-gray-400">(Optional)</span>
+                Phone Number <span className="text-red-500">*</span>
               </label>
               <input
                 id="phone"
                 name="phone"
                 type="tel"
+                required
                 value={formData.phone}
                 onChange={handleChange}
                 className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0F9D58] focus:border-transparent transition-all duration-200 ${

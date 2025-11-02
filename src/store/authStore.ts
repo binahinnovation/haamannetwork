@@ -11,7 +11,7 @@ type AuthState = {
   isLoading: boolean;
   realtimeSubscription: any | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string, phone?: string, referralCode?: string, bvn?: string) => Promise<void>;
+  signup: (email: string, password: string, name: string, phone: string, referralCode?: string, bvn?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (data: Partial<AuthUser>) => Promise<void>;
   updateWalletBalance: (newBalance: number) => Promise<void>;
@@ -194,9 +194,27 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      signup: async (email: string, password: string, name: string, phone?: string, referralCode?: string, bvn?: string) => {
+      signup: async (email: string, password: string, name: string, phone: string, referralCode?: string, bvn?: string) => {
         set({ isLoading: true });
         try {
+          // Validate required fields
+          if (!phone || !phone.trim()) {
+            throw new Error('Phone number is required');
+          }
+          
+          // Check if phone number already exists
+          const { data: existingPhone, error: phoneError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('phone', phone.trim())
+            .maybeSingle();
+            
+          if (phoneError && phoneError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+            console.error('Error checking phone number:', phoneError);
+          } else if (existingPhone) {
+            throw new Error('This phone number is already registered. Please use a different phone number.');
+          }
+          
           // Verify referral code if provided
           let referrerProfile = null;
           if (referralCode && referralCode.trim() !== '') {
@@ -243,7 +261,7 @@ export const useAuthStore = create<AuthState>()(
               id: data.user.id,
               name,
               email,
-              phone: phone || '',
+              phone: phone,
               wallet_balance: 0,
               is_admin: false,
               referral_code: userReferralCode,
