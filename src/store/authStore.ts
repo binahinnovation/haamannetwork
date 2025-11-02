@@ -252,39 +252,41 @@ export const useAuthStore = create<AuthState>()(
 
           if (error) throw error;
 
-          if (data.user) {
+          if (data.user && data.user.id) {
             // Generate unique random referral code
             const userReferralCode = generateRandomReferralCode();
-            
-            // Create user profile
-            const profile = {
-              id: data.user.id,
-              name,
-              email,
-              phone: phone,
-              wallet_balance: 0,
-              is_admin: false,
-              referral_code: userReferralCode,
-              referred_by: referrerProfile?.id || null,
-              total_referrals: 0,
-              referral_earnings: 0,
-              created_at: new Date().toISOString(),
-              bvn: bvn || null,
-            };
 
             const { data: insertedProfile, error: profileError } = await supabase
-              .from('profiles')
-              .insert([profile])
-              .select()
-              .single();
+              .rpc('create_user_profile', {
+                user_id: data.user.id,
+                user_name: name,
+                user_email: email,
+                user_phone: phone,
+                user_referral_code: userReferralCode,
+                user_referred_by: referrerProfile?.id || null,
+                user_bvn: bvn || null
+              });
 
             if (profileError) {
+              console.error('Profile creation error:', profileError);
+              throw new Error('Failed to create user profile: ' + profileError.message);
+            }
+
+            // The function returns JSON, so we need to parse it
+            const profileData = insertedProfile;
+            
+            if (!profileData) {
+              throw new Error('Failed to create user profile');
+            }
+
+            // Handle potential duplicate profile (though less likely with the function)
+            if (false) { // Keeping the old logic structure but disabling it
               // If profile creation fails due to duplicate key, fetch existing profile
-              if (profileError.code === '23505') {
+              if (false) {
                 const { data: existingProfile, error: fetchError } = await supabase
                   .from('profiles')
                   .select('*')
-                  .eq('id', data.user.id)
+                  .eq('id', data.user!.id)
                   .single();
 
                 if (fetchError) throw fetchError;
@@ -352,23 +354,23 @@ export const useAuthStore = create<AuthState>()(
               }
             }
 
-            // Set user in state
+            // Set user in state (profileData is JSON from the function)
             const user = {
-              id: insertedProfile.id,
-              name: insertedProfile.name,
-              email: insertedProfile.email,
-              phone: insertedProfile.phone,
-              walletBalance: insertedProfile.wallet_balance,
-              isAdmin: insertedProfile.is_admin,
-              referralCode: insertedProfile.referral_code,
-              referredBy: insertedProfile.referred_by,
-              totalReferrals: insertedProfile.total_referrals,
-              referralEarnings: insertedProfile.referral_earnings,
-              createdAt: insertedProfile.created_at,
-              virtualAccountBankName: insertedProfile.virtual_account_bank_name,
-              virtualAccountNumber: insertedProfile.virtual_account_number,
-              virtualAccountReference: insertedProfile.virtual_account_reference,
-              bvn: insertedProfile.bvn,
+              id: profileData.id,
+              name: profileData.name,
+              email: profileData.email,
+              phone: profileData.phone,
+              walletBalance: profileData.wallet_balance,
+              isAdmin: profileData.is_admin,
+              referralCode: profileData.referral_code,
+              referredBy: profileData.referred_by,
+              totalReferrals: profileData.total_referrals,
+              referralEarnings: profileData.referral_earnings,
+              createdAt: profileData.created_at,
+              virtualAccountBankName: profileData.virtual_account_bank_name,
+              virtualAccountNumber: profileData.virtual_account_number,
+              virtualAccountReference: profileData.virtual_account_reference,
+              bvn: profileData.bvn,
               hasPin: false,
             };
 
