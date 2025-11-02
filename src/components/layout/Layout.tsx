@@ -10,15 +10,22 @@ const Layout: React.FC = () => {
   const { isAuthenticated } = useAuthStore();
 
   useEffect(() => {
-    // Check user preference from localStorage or system preference
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setIsDarkMode(true);
-      document.documentElement.classList.add('dark');
+    // Only apply dark mode for authenticated users
+    if (isAuthenticated) {
+      // Check user preference from localStorage or system preference
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      
+      if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        setIsDarkMode(true);
+        document.documentElement.classList.add('dark');
+      }
+    } else {
+      // For non-authenticated users (landing page), always use light mode
+      setIsDarkMode(false);
+      document.documentElement.classList.remove('dark');
     }
-  }, []);
+  }, [isAuthenticated]);
 
   const toggleDarkMode = () => {
     setIsDarkMode((prev) => {
