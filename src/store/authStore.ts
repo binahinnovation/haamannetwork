@@ -255,6 +255,30 @@ export const useAuthStore = create<AuthState>()(
           if (data.user && data.user.id) {
             // Generate unique random referral code
             const userReferralCode = generateRandomReferralCode();
+            
+            // Check if user has a session (means they're confirmed and logged in)
+            // If email confirmation is enabled, data.session will be null until email is confirmed
+            if (!data.session) {
+              // User created but needs to confirm email
+              // We'll create the profile but not log them in
+              try {
+                await supabase.rpc('create_user_profile', {
+                  user_id: data.user.id,
+                  user_name: name,
+                  user_email: email,
+                  user_phone: phone,
+                  user_referral_code: userReferralCode,
+                  user_referred_by: referrerProfile?.id || null,
+                  user_bvn: bvn || null
+                });
+              } catch (profileError) {
+                console.error('Profile creation error during signup:', profileError);
+                // Don't throw error here, profile can be created later on login
+              }
+              
+              set({ isLoading: false });
+              return; // Don't log them in, they need to confirm email first
+            }
 
             const { data: insertedProfile, error: profileError } = await supabase
               .rpc('create_user_profile', {

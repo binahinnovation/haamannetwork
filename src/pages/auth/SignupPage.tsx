@@ -153,7 +153,21 @@ const SignupPage: React.FC = () => {
         formData.referralCode,
         bvn
       );
-      navigate('/');
+      
+      // Check if user is actually logged in (has session)
+      // If email confirmation is enabled, they won't be logged in yet
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        // User is logged in (email confirmation disabled or already confirmed)
+        navigate('/');
+      } else {
+        // User created but needs to confirm email
+        // Show success message instead of error
+        setErrors({ 
+          success: '✅ Account created successfully! Please check your email and click the confirmation link to complete your registration.' 
+        });
+      }
     } catch (error: any) {
       // Check if the error is specifically about user already existing
       if (error.message?.includes('User already registered') || 
@@ -216,7 +230,24 @@ const SignupPage: React.FC = () => {
             </div>
           )}
 
-          {errors.general && (
+          {errors.success && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3">
+              <CheckCircle className="text-green-500 mt-0.5 flex-shrink-0" size={20} />
+              <div className="flex-1">
+                <span className="text-green-700 text-sm">{errors.success}</span>
+                <div className="mt-2">
+                  <Link
+                    to="/login"
+                    className="text-[#0F9D58] hover:text-[#0d8a4f] font-medium text-sm underline"
+                  >
+                    Go to Sign In
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {errors.general && !errors.success && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
               <AlertCircle className="text-red-500 mt-0.5 flex-shrink-0" size={20} />
               <div className="flex-1">
