@@ -36,6 +36,9 @@ import ProductCategoriesManagement from './pages/admin/ProductCategoriesManageme
 import UsersManagement from './pages/admin/UsersManagement';
 import TransactionsManagement from './pages/admin/TransactionsManagement';
 import SecurityDashboard from './pages/admin/SecurityDashboard';
+import SpendingLimitsManagement from './pages/admin/SpendingLimitsManagement';
+import AuditLogsPage from './pages/admin/AuditLogsPage';
+import SecurityAlertsPage from './pages/admin/SecurityAlertsPage';
 import AdminSettings from './pages/admin/AdminSettings';
 import OrdersManagement from './pages/admin/OrdersManagement';
 import WalletManagement from './pages/admin/WalletManagement';
@@ -77,6 +80,9 @@ function App() {
         <Route path="/admin/product-categories" element={<ProductCategoriesManagement />} />
         <Route path="/admin/users" element={<UsersManagement />} />
         <Route path="/admin/security" element={<SecurityDashboard />} />
+        <Route path="/admin/spending-limits" element={<SpendingLimitsManagement />} />
+        <Route path="/admin/audit-logs" element={<AuditLogsPage />} />
+        <Route path="/admin/security-alerts" element={<SecurityAlertsPage />} />
         <Route path="/admin/transactions" element={<TransactionsManagement />} />
         <Route path="/admin/orders" element={<OrdersManagement />} />
         <Route path="/admin/wallet" element={<WalletManagement />} />
