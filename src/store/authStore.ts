@@ -19,6 +19,8 @@ type AuthState = {
   processSecureDeposit: (amount: number, depositDetails?: any, externalTransactionId?: string) => Promise<any>;
   processSecureRefund: (amount: number, originalTransactionId: string, refundReason: string, refundDetails?: any) => Promise<any>;
   getSecureBalance: () => Promise<number>;
+  getSpendingLimitInfo: () => Promise<any>;
+  getDailySpending: () => Promise<any>;
   checkAuth: () => Promise<void>;
   refreshUserData: () => Promise<void>;
   createVirtualAccount: (userId: string, email: string, firstName: string, lastName: string, phoneNumber?: string, bvn?: string) => Promise<void>;
@@ -476,13 +478,14 @@ export const useAuthStore = create<AuthState>()(
         throw new Error('Direct wallet balance updates are disabled for security. Use secure transaction functions.');
       },
 
-      // NEW SECURE FUNCTIONS
+      // NEW SECURE FUNCTIONS WITH TRANSACTION LOCKING AND SPENDING LIMITS
       processSecurePurchase: async (amount: number, transactionType: string, transactionDetails: any = {}, externalTransactionId?: string) => {
         const state = get();
         if (!state.user) throw new Error('User not authenticated');
 
         try {
-          const { data, error } = await supabase.rpc('process_secure_purchase', {
+          // Use the new secure function with transaction locking and spending limits
+          const { data, error } = await supabase.rpc('process_secure_purchase_with_limits', {
             p_user_id: state.user.id,
             p_amount: amount,
             p_transaction_type: transactionType,
@@ -504,6 +507,52 @@ export const useAuthStore = create<AuthState>()(
           return data;
         } catch (error) {
           console.error('Error processing secure purchase:', error);
+          throw error;
+        }
+      },
+
+      // NEW: Function to get user's spending limit and current usage
+      getSpendingLimitInfo: async () => {
+        const state = get();
+        if (!state.user) throw new Error('User not authenticated');
+
+        try {
+          const { data, error } = await supabase.rpc('get_user_spending_limit', {
+            p_user_id: state.user.id
+          });
+
+          if (error) throw error;
+
+          if (!data.success) {
+            throw new Error(data.error || 'Failed to get spending limit');
+          }
+
+          return data;
+        } catch (error) {
+          console.error('Error getting spending limit:', error);
+          throw error;
+        }
+      },
+
+      // NEW: Function to get user's daily spending
+      getDailySpending: async () => {
+        const state = get();
+        if (!state.user) throw new Error('User not authenticated');
+
+        try {
+          const { data, error } = await supabase.rpc('get_user_daily_spending', {
+            p_user_id: state.user.id
+          });
+
+          if (error) throw error;
+
+          if (!data.success) {
+            throw new Error(data.error || 'Failed to get daily spending');
+          }
+
+          return data;
+        } catch (error) {
+          console.error('Error getting daily spending:', error);
           throw error;
         }
       },

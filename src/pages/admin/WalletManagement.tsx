@@ -84,19 +84,33 @@ const WalletManagement: React.FC = () => {
       return;
     }
 
+    // Prevent multiple clicks by checking if already processing
+    if (funding) {
+      return;
+    }
+
     setFunding(true);
     setMessage(null);
 
     try {
-      // Update user's wallet balance
-      const newBalance = searchedUser.wallet_balance + amount;
-      
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ wallet_balance: newBalance })
-        .eq('id', searchedUser.id);
+      // SECURE: Use the secure deposit function instead of direct balance update
+      const { data, error } = await supabase.rpc('process_secure_deposit', {
+        p_user_id: searchedUser.id,
+        p_amount: amount,
+        p_deposit_details: {
+          method: 'admin_credit',
+          admin_id: user?.id,
+          admin_name: user?.name,
+          note: 'Wallet funded by admin'
+        },
+        p_external_transaction_id: `ADMIN-${Date.now()}`
+      });
 
-      if (updateError) throw updateError;
+      if (error) throw error;
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fund wallet');
+      }
 
       // Create transaction record
       const { error: transactionError } = await supabase
@@ -125,22 +139,34 @@ const WalletManagement: React.FC = () => {
           user_id: searchedUser.id,
           user_email: searchedUser.email,
           amount: amount,
-          previous_balance: searchedUser.wallet_balance,
-          new_balance: newBalance
+          previous_balance: data.balance_before,
+          new_balance: data.balance_after
         },
       }]);
 
-      // Update local user data
-      setSearchedUser(prev => prev ? { ...prev, wallet_balance: newBalance } : null);
+      // Update local user data with the new balance from the secure function
+      setSearchedUser(prev => prev ? { ...prev, wallet_balance: data.balance_after } : null);
       setFundAmount('');
       setMessage({ 
         type: 'success', 
         text: `Successfully funded ${searchedUser.name}'s wallet with ${formatCurrency(amount)}` 
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error funding wallet:', error);
-      setMessage({ type: 'error', text: 'Error funding wallet. Please try again.' });
+      
+      // Handle specific error messages for better UX
+      let userErrorMessage = 'Error funding wallet. Please try again.';
+      
+      if (error.message === 'Transaction already in progress') {
+        userErrorMessage = 'A funding transaction is already in progress. Please wait a moment and try again.';
+      } else if (error.message.includes('User not found')) {
+        userErrorMessage = 'User not found. Please refresh and try again.';
+      } else if (error.message) {
+        userErrorMessage = error.message;
+      }
+      
+      setMessage({ type: 'error', text: userErrorMessage });
     } finally {
       setFunding(false);
     }
@@ -319,11 +345,11 @@ const WalletManagement: React.FC = () => {
                 <Button
                   onClick={handleFundWallet}
                   isLoading={funding}
-                  disabled={!fundAmount || isNaN(parseFloat(fundAmount)) || parseFloat(fundAmount) <= 0}
-                  className="w-full bg-[#0F9D58] hover:bg-[#0d8a4f] text-white py-3"
+                  disabled={funding || !fundAmount || isNaN(parseFloat(fundAmount)) || parseFloat(fundAmount) <= 0}
+                  className="w-full bg-[#0F9D58] hover:bg-[#0d8a4f] text-white py-3 disabled:opacity-50 disabled:cursor-not-allowed"
                   icon={<Plus size={16} />}
                 >
-                  Fund Wallet
+                  {funding ? 'Processing...' : 'Fund Wallet'}
                 </Button>
                 
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">

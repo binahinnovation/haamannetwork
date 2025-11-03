@@ -35,6 +35,7 @@ import ProductsManagement from './pages/admin/ProductsManagement';
 import ProductCategoriesManagement from './pages/admin/ProductCategoriesManagement';
 import UsersManagement from './pages/admin/UsersManagement';
 import TransactionsManagement from './pages/admin/TransactionsManagement';
+import SecurityDashboard from './pages/admin/SecurityDashboard';
 import AdminSettings from './pages/admin/AdminSettings';
 import OrdersManagement from './pages/admin/OrdersManagement';
 import WalletManagement from './pages/admin/WalletManagement';
@@ -75,6 +76,7 @@ function App() {
         <Route path="/admin/products" element={<ProductsManagement />} />
         <Route path="/admin/product-categories" element={<ProductCategoriesManagement />} />
         <Route path="/admin/users" element={<UsersManagement />} />
+        <Route path="/admin/security" element={<SecurityDashboard />} />
         <Route path="/admin/transactions" element={<TransactionsManagement />} />
         <Route path="/admin/orders" element={<OrdersManagement />} />
         <Route path="/admin/wallet" element={<WalletManagement />} />

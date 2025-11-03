@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, ShoppingBag, DollarSign, TrendingUp, Settings, Package, CreditCard, Activity, LogOut, Eye, Plus, Wallet, Wifi, Ban as Bank, Tag, MessageCircle } from 'lucide-react';
+import { Users, ShoppingBag, DollarSign, TrendingUp, Settings, Package, CreditCard, Activity, LogOut, Eye, Plus, Wallet, Wifi, Ban as Bank, Tag, MessageCircle, Shield } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../lib/utils';
@@ -260,6 +260,13 @@ const AdminDashboard: React.FC = () => {
       icon: Users,
       path: '/admin/users',
       color: 'bg-green-500',
+    },
+    {
+      title: 'Security Dashboard',
+      description: 'Monitor security & spending limits',
+      icon: Shield,
+      path: '/admin/security',
+      color: 'bg-red-500',
     },
     {
       title: 'Transactions',

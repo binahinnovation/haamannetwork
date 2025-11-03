@@ -152,6 +152,11 @@ const AirtimeServicePage: React.FC = () => {
       return;
     }
 
+    // Prevent multiple clicks by checking if already loading
+    if (isLoading) {
+      return;
+    }
+
     // Check if user has PIN set
     if (user.hasPin) {
       setShowPinModal(true);
@@ -163,13 +168,18 @@ const AirtimeServicePage: React.FC = () => {
   };
 
   const processPayment = async () => {
+    // Prevent multiple calls if already processing
+    if (isLoading) {
+      return;
+    }
+
     setIsLoading(true);
     setErrorMessage('');
 
     try {
       const numAmount = Number(amount);
       
-      // SECURE: Process purchase with atomic balance validation
+      // SECURE: Process purchase with atomic balance validation and transaction locking
       const purchaseResult = await processSecurePurchase(
         numAmount,
         'airtime_purchase',
@@ -202,7 +212,9 @@ const AirtimeServicePage: React.FC = () => {
       // Set user-friendly error message
       let userErrorMessage = 'Failed to purchase airtime. Please try again.';
       
-      if (error.message === 'Insufficient wallet balance') {
+      if (error.message === 'Transaction already in progress') {
+        userErrorMessage = 'A transaction is already in progress. Please wait a moment and try again.';
+      } else if (error.message === 'Insufficient balance') {
         userErrorMessage = 'Insufficient wallet balance. Please fund your wallet and try again.';
       } else if (error.message.includes('Unable to connect') || 
                  error.message.includes('internet connection')) {
@@ -632,9 +644,10 @@ const AirtimeServicePage: React.FC = () => {
             <Button
               onClick={handlePayment}
               isLoading={isLoading}
-              className="flex-1 bg-[#0F9D58] hover:bg-[#0d8a4f] text-white py-3"
+              disabled={isLoading}
+              className="flex-1 bg-[#0F9D58] hover:bg-[#0d8a4f] text-white py-3 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Pay Now
+              {isLoading ? 'Processing...' : 'Pay Now'}
             </Button>
           </div>
         </Card>

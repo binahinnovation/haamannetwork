@@ -118,6 +118,11 @@ const ProductDetailPage: React.FC = () => {
   const handleCheckout = async () => {
     if (!product || !user) return;
 
+    // Prevent multiple clicks by checking if already processing
+    if (isProcessing) {
+      return;
+    }
+
     // Check if user has PIN set and is using wallet payment
     if (user.hasPin && paymentMethod === 'wallet') {
       setShowPinModal(true);
@@ -130,6 +135,11 @@ const ProductDetailPage: React.FC = () => {
 
   const processCheckout = async () => {
     if (!product || !user) return;
+
+    // Prevent multiple calls if already processing
+    if (isProcessing) {
+      return;
+    }
 
     setIsProcessing(true);
     try {
@@ -187,7 +197,7 @@ const ProductDetailPage: React.FC = () => {
 
       if (transactionError) throw transactionError;
 
-      // SECURE: Deduct from wallet if paying with wallet
+      // SECURE: Deduct from wallet if paying with wallet using transaction locking
       if (paymentMethod === 'wallet') {
         await processSecurePurchase(
           totalAmount,
@@ -205,9 +215,29 @@ const ProductDetailPage: React.FC = () => {
       setShowCheckoutModal(false);
       setShowPinModal(false);
       navigate('/store/orders');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing order:', error);
-      alert('Error processing order. Please try again.');
+      
+      // Handle specific error messages for better UX
+      let userErrorMessage = 'Error processing order. Please try again.';
+      
+      if (error.message === 'Transaction already in progress') {
+        userErrorMessage = 'A transaction is already in progress. Please wait a moment and try again.';
+      } else if (error.message === 'Insufficient balance') {
+        userErrorMessage = 'Insufficient wallet balance. Please fund your wallet or choose pay on delivery.';
+      } else if (error.message.includes('Unable to connect') || 
+                 error.message.includes('internet connection')) {
+        userErrorMessage = 'Unable to connect to payment service. Please check your internet connection and try again.';
+      } else if (error.message.includes('Service temporarily unavailable') || 
+                 error.message.includes('contact support')) {
+        userErrorMessage = 'Payment service temporarily unavailable. Please try again later or contact support.';
+      } else if (error.message.includes('timeout')) {
+        userErrorMessage = 'Request timeout. Please check your internet connection and try again.';
+      } else if (error.message) {
+        userErrorMessage = error.message;
+      }
+      
+      alert(userErrorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -564,9 +594,10 @@ const ProductDetailPage: React.FC = () => {
                   variant="primary"
                   onClick={handleCheckout}
                   isLoading={isProcessing}
-                  className="flex-1 text-sm"
+                  disabled={isProcessing}
+                  className="flex-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Place Order
+                  {isProcessing ? 'Processing...' : 'Place Order'}
                 </Button>
               </div>
             </div>

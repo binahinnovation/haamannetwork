@@ -71,6 +71,11 @@ const ElectricityServicePage: React.FC = () => {
       return;
     }
 
+    // Prevent multiple clicks by checking if already loading
+    if (isLoading) {
+      return;
+    }
+
     // Check if user has PIN set
     if (user.hasPin) {
       setShowPinModal(true);
@@ -82,13 +87,18 @@ const ElectricityServicePage: React.FC = () => {
   };
 
   const processPayment = async () => {
+    // Prevent multiple calls if already processing
+    if (isLoading) {
+      return;
+    }
+
     setIsLoading(true);
     setErrorMessage('');
 
     try {
       const amount = Number(formData.amount);
       
-      // SECURE: Process purchase with atomic balance validation
+      // SECURE: Process purchase with atomic balance validation and transaction locking
       const purchaseResult = await processSecurePurchase(
         amount,
         'electricity_payment',
@@ -128,7 +138,27 @@ const ElectricityServicePage: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Electricity payment error:', error);
-      setErrorMessage(error.message || 'Failed to pay electricity bill. Please try again.');
+      
+      // Handle specific error messages for better UX
+      let userErrorMessage = 'Failed to pay electricity bill. Please try again.';
+      
+      if (error.message === 'Transaction already in progress') {
+        userErrorMessage = 'A transaction is already in progress. Please wait a moment and try again.';
+      } else if (error.message === 'Insufficient balance') {
+        userErrorMessage = 'Insufficient wallet balance. Please fund your wallet and try again.';
+      } else if (error.message.includes('Unable to connect') || 
+                 error.message.includes('internet connection')) {
+        userErrorMessage = 'Unable to connect to payment service. Please check your internet connection and try again.';
+      } else if (error.message.includes('Service temporarily unavailable') || 
+                 error.message.includes('contact support')) {
+        userErrorMessage = 'Payment service temporarily unavailable. Please try again later or contact support.';
+      } else if (error.message.includes('timeout')) {
+        userErrorMessage = 'Request timeout. Please check your internet connection and try again.';
+      } else if (error.message) {
+        userErrorMessage = error.message;
+      }
+      
+      setErrorMessage(userErrorMessage);
       setIsSuccess(false);
       setStep(3);
     } finally {
@@ -362,9 +392,10 @@ const ElectricityServicePage: React.FC = () => {
             <Button
               onClick={handlePayment}
               isLoading={isLoading}
-              className="flex-1 bg-[#0F9D58] hover:bg-[#0d8a4f] text-white py-3"
+              disabled={isLoading}
+              className="flex-1 bg-[#0F9D58] hover:bg-[#0d8a4f] text-white py-3 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Pay Now
+              {isLoading ? 'Processing...' : 'Pay Now'}
             </Button>
           </div>
         </Card>
