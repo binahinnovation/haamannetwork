@@ -49,7 +49,7 @@ const networkProviders = [
 
 const AirtimeServicePage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, updateWalletBalance } = useAuthStore();
+  const { user, processSecurePurchase } = useAuthStore();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedNetwork, setSelectedNetwork] = useState('');
@@ -169,20 +169,23 @@ const AirtimeServicePage: React.FC = () => {
     try {
       const numAmount = Number(amount);
       
-      if (user.walletBalance < numAmount) {
-        throw new Error('Insufficient wallet balance');
-      }
+      // SECURE: Process purchase with atomic balance validation
+      const purchaseResult = await processSecurePurchase(
+        numAmount,
+        'airtime_purchase',
+        {
+          network: selectedNetwork,
+          phoneNumber: phoneNumber,
+          amount: numAmount
+        }
+      );
 
-      // Process the airtime transaction first (before deducting wallet)
+      // Process the airtime transaction
       const result = await serviceAPI.processAirtimeTransaction(user.id, {
         network: selectedNetwork,
         amount: numAmount,
         phoneNumber: phoneNumber,
       });
-      
-      // Only deduct from wallet if transaction was successful
-      const newBalance = user.walletBalance - numAmount;
-      await updateWalletBalance(newBalance);
       
       setTransaction(result);
       setIsSuccess(true);

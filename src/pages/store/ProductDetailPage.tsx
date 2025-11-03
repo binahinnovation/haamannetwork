@@ -44,7 +44,7 @@ type Product = {
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, isAuthenticated, updateWalletBalance } = useAuthStore();
+  const { user, isAuthenticated, processSecurePurchase } = useAuthStore();
   const { addItem } = useCartStore();
   
   const [product, setProduct] = useState<Product | null>(null);
@@ -187,16 +187,19 @@ const ProductDetailPage: React.FC = () => {
 
       if (transactionError) throw transactionError;
 
-      // Deduct from wallet if paying with wallet
+      // SECURE: Deduct from wallet if paying with wallet
       if (paymentMethod === 'wallet') {
-        const newBalance = user.walletBalance - totalAmount;
-        const { error: balanceError } = await supabase
-          .from('profiles')
-          .update({ wallet_balance: newBalance })
-          .eq('id', user.id);
-
-        if (balanceError) throw balanceError;
-        updateWalletBalance(newBalance);
+        await processSecurePurchase(
+          totalAmount,
+          'product_purchase',
+          {
+            product_id: product.id,
+            product_name: product.name,
+            quantity: quantity,
+            unit_price: product.price,
+            total_amount: totalAmount
+          }
+        );
       }
 
       setShowCheckoutModal(false);

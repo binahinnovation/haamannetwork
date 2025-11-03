@@ -79,7 +79,7 @@ type DataPlanCategory = {
 
 const DataServicePage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, updateWalletBalance } = useAuthStore();
+  const { user, processSecurePurchase } = useAuthStore();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedNetwork, setSelectedNetwork] = useState('');
@@ -277,9 +277,19 @@ const DataServicePage: React.FC = () => {
     try {
       const amount = selectedPlan.selling_price;
       
-      if (user.walletBalance < amount) {
-        throw new Error('Insufficient wallet balance');
-      }
+      // SECURE: Process purchase with atomic balance validation
+      await processSecurePurchase(
+        amount,
+        'data_purchase',
+        {
+          network: selectedNetwork.toLowerCase(),
+          plan: selectedPlan.external_id.toString(),
+          phoneNumber: phoneNumber,
+          plan_description: selectedPlan.description,
+          plan_size: selectedPlan.size,
+          plan_validity: selectedPlan.validity
+        }
+      );
 
       // Process the data transaction using external_id
       const result = await serviceAPI.processDataTransaction(user.id, {
@@ -288,10 +298,6 @@ const DataServicePage: React.FC = () => {
         phoneNumber: phoneNumber,
         amount: amount,
       });
-      
-      // Deduct from wallet after successful transaction
-      const newBalance = user.walletBalance - amount;
-      await updateWalletBalance(newBalance);
       
       setTransaction(result);
       setIsSuccess(true);

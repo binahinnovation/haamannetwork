@@ -14,7 +14,11 @@ type AuthState = {
   signup: (email: string, password: string, name: string, phone: string, referralCode?: string, bvn?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (data: Partial<AuthUser>) => Promise<void>;
-  updateWalletBalance: (newBalance: number) => Promise<void>;
+  updateWalletBalance: (newBalance: number) => Promise<void>; // DEPRECATED - kept for compatibility
+  processSecurePurchase: (amount: number, transactionType: string, transactionDetails?: any, externalTransactionId?: string) => Promise<any>;
+  processSecureDeposit: (amount: number, depositDetails?: any, externalTransactionId?: string) => Promise<any>;
+  processSecureRefund: (amount: number, originalTransactionId: string, refundReason: string, refundDetails?: any) => Promise<any>;
+  getSecureBalance: () => Promise<number>;
   checkAuth: () => Promise<void>;
   refreshUserData: () => Promise<void>;
   createVirtualAccount: (userId: string, email: string, firstName: string, lastName: string, phoneNumber?: string, bvn?: string) => Promise<void>;
@@ -466,25 +470,128 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      updateWalletBalance: async (newBalance) => {
+      // DEPRECATED: Direct balance updates are now forbidden for security
+      updateWalletBalance: async (_newBalance) => {
+        console.error('SECURITY WARNING: Direct wallet balance updates are disabled. Use processSecurePurchase, processSecureDeposit, or processSecureRefund instead.');
+        throw new Error('Direct wallet balance updates are disabled for security. Use secure transaction functions.');
+      },
+
+      // NEW SECURE FUNCTIONS
+      processSecurePurchase: async (amount: number, transactionType: string, transactionDetails: any = {}, externalTransactionId?: string) => {
         const state = get();
-        if (!state.user) return;
+        if (!state.user) throw new Error('User not authenticated');
 
         try {
-          // Update in database
-          const { error } = await supabase
-            .from('profiles')
-            .update({ wallet_balance: newBalance })
-            .eq('id', state.user.id);
+          const { data, error } = await supabase.rpc('process_secure_purchase', {
+            p_user_id: state.user.id,
+            p_amount: amount,
+            p_transaction_type: transactionType,
+            p_transaction_details: transactionDetails,
+            p_external_transaction_id: externalTransactionId
+          });
 
           if (error) throw error;
 
-          // Update local state
+          if (!data.success) {
+            throw new Error(data.error || 'Transaction failed');
+          }
+
+          // Update local state with new balance
           set((state) => ({
-            user: state.user ? { ...state.user, walletBalance: newBalance } : null,
+            user: state.user ? { ...state.user, walletBalance: data.balance_after } : null,
           }));
+
+          return data;
         } catch (error) {
-          console.error('Error updating wallet balance:', error);
+          console.error('Error processing secure purchase:', error);
+          throw error;
+        }
+      },
+
+      processSecureDeposit: async (amount: number, depositDetails: any = {}, externalTransactionId?: string) => {
+        const state = get();
+        if (!state.user) throw new Error('User not authenticated');
+
+        try {
+          const { data, error } = await supabase.rpc('process_secure_deposit', {
+            p_user_id: state.user.id,
+            p_amount: amount,
+            p_deposit_details: depositDetails,
+            p_external_transaction_id: externalTransactionId
+          });
+
+          if (error) throw error;
+
+          if (!data.success) {
+            throw new Error(data.error || 'Deposit failed');
+          }
+
+          // Update local state with new balance
+          set((state) => ({
+            user: state.user ? { ...state.user, walletBalance: data.balance_after } : null,
+          }));
+
+          return data;
+        } catch (error) {
+          console.error('Error processing secure deposit:', error);
+          throw error;
+        }
+      },
+
+      processSecureRefund: async (amount: number, originalTransactionId: string, refundReason: string, refundDetails: any = {}) => {
+        const state = get();
+        if (!state.user) throw new Error('User not authenticated');
+
+        try {
+          const { data, error } = await supabase.rpc('process_secure_refund', {
+            p_user_id: state.user.id,
+            p_amount: amount,
+            p_original_transaction_id: originalTransactionId,
+            p_refund_reason: refundReason,
+            p_refund_details: refundDetails
+          });
+
+          if (error) throw error;
+
+          if (!data.success) {
+            throw new Error(data.error || 'Refund failed');
+          }
+
+          // Update local state with new balance
+          set((state) => ({
+            user: state.user ? { ...state.user, walletBalance: data.balance_after } : null,
+          }));
+
+          return data;
+        } catch (error) {
+          console.error('Error processing secure refund:', error);
+          throw error;
+        }
+      },
+
+      getSecureBalance: async () => {
+        const state = get();
+        if (!state.user) throw new Error('User not authenticated');
+
+        try {
+          const { data, error } = await supabase.rpc('get_secure_user_balance', {
+            p_user_id: state.user.id
+          });
+
+          if (error) throw error;
+
+          if (!data.success) {
+            throw new Error(data.error || 'Failed to get balance');
+          }
+
+          // Update local state with current balance
+          set((state) => ({
+            user: state.user ? { ...state.user, walletBalance: data.balance } : null,
+          }));
+
+          return data.balance;
+        } catch (error) {
+          console.error('Error getting secure balance:', error);
           throw error;
         }
       },

@@ -31,7 +31,7 @@ const meterTypes = [
 
 const ElectricityServicePage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, updateWalletBalance } = useAuthStore();
+  const { user, processSecurePurchase, processSecureRefund } = useAuthStore();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -88,36 +88,49 @@ const ElectricityServicePage: React.FC = () => {
     try {
       const amount = Number(formData.amount);
       
-      if (user.walletBalance < amount) {
-        throw new Error('Insufficient wallet balance');
+      // SECURE: Process purchase with atomic balance validation
+      const purchaseResult = await processSecurePurchase(
+        amount,
+        'electricity_payment',
+        {
+          disco: formData.disco,
+          meterNumber: formData.meterNumber,
+          meterType: formData.meterType,
+          amount: amount
+        }
+      );
+
+      let transactionId = '';
+      try {
+        // Process the electricity transaction
+        const result = await serviceAPI.processElectricityTransaction(user.id, {
+          disco: formData.disco,
+          amount: amount,
+          meterNumber: formData.meterNumber,
+          meterType: formData.meterType,
+        });
+        
+        transactionId = result.reference || result.id || '';
+        setTransaction(result);
+        setIsSuccess(true);
+        setStep(3);
+      } catch (apiError: any) {
+        // If external API fails, refund the user
+        if (transactionId) {
+          await processSecureRefund(
+            amount,
+            transactionId,
+            'External API failure',
+            { error: apiError.message, disco: formData.disco }
+          );
+        }
+        throw apiError;
       }
-
-      // Deduct from wallet first
-      const newBalance = user.walletBalance - amount;
-      await updateWalletBalance(newBalance);
-
-      // Process the electricity transaction
-      const result = await serviceAPI.processElectricityTransaction(user.id, {
-        disco: formData.disco,
-        amount: amount,
-        meterNumber: formData.meterNumber,
-        meterType: formData.meterType,
-      });
-      
-      setTransaction(result);
-      setIsSuccess(true);
-      setStep(3);
     } catch (error: any) {
       console.error('Electricity payment error:', error);
       setErrorMessage(error.message || 'Failed to pay electricity bill. Please try again.');
       setIsSuccess(false);
       setStep(3);
-      
-      // If wallet was deducted but transaction failed, we should refund
-      if (user && error.message !== 'Insufficient wallet balance') {
-        // Refund the wallet
-        await updateWalletBalance(user.walletBalance);
-      }
     } finally {
       setIsLoading(false);
       setShowPinModal(false);
