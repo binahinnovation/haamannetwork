@@ -11,15 +11,16 @@ import {
   Eye,
   EyeOff,
   ShoppingBag,
-  BookOpen,
   Moon,
   Sun,
   Package,
   MessageCircle,
-  RefreshCw
+  RefreshCw,
+  Store
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useServiceConfigStore } from '../store/serviceConfigStore';
+import { useVendorStore } from '../store/vendorStore';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import ProductSlideshow from '../components/home/ProductSlideshow';
@@ -29,6 +30,7 @@ const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, refreshUserData } = useAuthStore();
   const { config: serviceConfig, fetchConfig } = useServiceConfigStore();
+  const { shop, fetchShop } = useVendorStore();
   const [showBalance, setShowBalance] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -38,6 +40,15 @@ const DashboardPage: React.FC = () => {
   useEffect(() => {
     fetchConfig();
   }, [fetchConfig]);
+
+  // Fetch vendor shop status
+  useEffect(() => {
+    if (user?.id) {
+      fetchShop(user.id);
+    }
+  }, [user?.id, fetchShop]);
+
+  const isVendor = !!shop;
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -396,27 +407,27 @@ const DashboardPage: React.FC = () => {
               >
                 Add Money
               </Button>
-              {/* Debug buttons - only show in development */}
-              {import.meta.env.DEV && (
+              {/* Debug buttons - only show for admin users */}
+              {user?.isAdmin && (
                 <div className="flex gap-1">
                   <Button
                     onClick={testWalletUpdate}
                     className="bg-yellow-500 text-white hover:bg-yellow-600 px-2 py-2 rounded-full font-medium text-xs"
-                    title="Test wallet update (Dev only)"
+                    title="Test wallet update (Admin only)"
                   >
                     Test
                   </Button>
                   <Button
                     onClick={debugWalletIssue}
                     className="bg-red-500 text-white hover:bg-red-600 px-2 py-2 rounded-full font-medium text-xs"
-                    title="Debug wallet issue (Dev only)"
+                    title="Debug wallet issue (Admin only)"
                   >
                     Debug
                   </Button>
                   <Button
                     onClick={fixWalletBalance}
                     className="bg-blue-500 text-white hover:bg-blue-600 px-2 py-2 rounded-full font-medium text-xs"
-                    title="Fix wallet balance (Dev only)"
+                    title="Fix wallet balance (Admin only)"
                   >
                     Fix
                   </Button>
@@ -557,25 +568,21 @@ const DashboardPage: React.FC = () => {
             </Card>
           )}
 
-          {getServiceStatus('waec') === 'coming_soon' && (
-            <Card 
-              className="p-2 sm:p-3 md:p-4 bg-white dark:bg-gray-800 cursor-pointer hover:shadow-md transition-shadow relative"
-              onClick={() => handleComingSoonNavigation('Education Services', 'Access educational services, course payments, and academic resources')}
-            >
-              <div className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs px-1 sm:px-1.5 py-0.5 rounded-full font-bold">
-                Soon
+          {/* Explore Marketplace - Always visible */}
+          <Card 
+            className="p-2 sm:p-3 md:p-4 bg-white dark:bg-gray-800 cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => navigate('/store?view=shops')}
+          >
+            <div className="flex flex-col items-center space-y-1 sm:space-y-2 md:space-y-3">
+              <div className="w-8 sm:w-10 h-8 sm:h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <Store size={14} className="text-indigo-600 sm:w-4 sm:h-4" />
               </div>
-              <div className="flex flex-col items-center space-y-1 sm:space-y-2 md:space-y-3">
-                <div className="w-8 sm:w-10 h-8 sm:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <BookOpen size={14} className="text-purple-600 sm:w-4 sm:h-4" />
-                </div>
-                <div className="text-center min-w-0 w-full">
-                  <p className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm truncate">Education</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">WAEC & more</p>
-                </div>
+              <div className="text-center min-w-0 w-full">
+                <p className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm truncate">Marketplace</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">Explore shops</p>
               </div>
-            </Card>
-          )}
+            </div>
+          </Card>
 
           {getServiceStatus('store') !== 'disabled' && (
             <Card 
@@ -610,6 +617,26 @@ const DashboardPage: React.FC = () => {
               </div>
             </Card>
           )}
+
+          {/* Become a Vendor - Always visible, navigates to onboard or dashboard based on status */}
+          <Card 
+            className="p-2 sm:p-3 md:p-4 bg-white dark:bg-gray-800 cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => navigate(isVendor ? '/vendor/dashboard' : '/vendor/onboard')}
+          >
+            <div className="flex flex-col items-center space-y-1 sm:space-y-2 md:space-y-3">
+              <div className="w-8 sm:w-10 h-8 sm:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <Store size={14} className="text-purple-600 sm:w-4 sm:h-4" />
+              </div>
+              <div className="text-center min-w-0 w-full">
+                <p className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm truncate">
+                  {isVendor ? 'My Shop' : 'Become Vendor'}
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
+                  {isVendor ? 'Manage shop' : 'Sell products'}
+                </p>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
     </div>

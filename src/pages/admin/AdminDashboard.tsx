@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, ShoppingBag, DollarSign, TrendingUp, Settings, Package, CreditCard, Activity, LogOut, Eye, Plus, Wallet, Wifi, Ban as Bank, Tag, MessageCircle, Shield } from 'lucide-react';
+import { Users, ShoppingBag, DollarSign, TrendingUp, Settings, Package, CreditCard, Activity, LogOut, Eye, Plus, Wallet, Wifi, Ban as Bank, Tag, MessageCircle, Shield, Store } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../lib/utils';
@@ -309,6 +309,20 @@ const AdminDashboard: React.FC = () => {
       icon: MessageCircle,
       path: '/admin/support-tickets',
       color: 'bg-red-500',
+    },
+    {
+      title: 'Vendor Management',
+      description: 'Manage vendor shops',
+      icon: Store,
+      path: '/admin/vendors',
+      color: 'bg-teal-500',
+    },
+    {
+      title: 'Marketplace Settings',
+      description: 'Configure marketplace fees',
+      icon: DollarSign,
+      path: '/admin/marketplace-settings',
+      color: 'bg-cyan-500',
     },
     {
       title: 'Settings',

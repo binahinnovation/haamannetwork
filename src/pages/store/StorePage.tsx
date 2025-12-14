@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ShoppingBag, Filter, Star, Heart } from 'lucide-react';
+import { Search, ShoppingBag, Filter, Store, BadgeCheck, X } from 'lucide-react';
 import ProductCard from '../../components/store/ProductCard';
 import Card from '../../components/ui/Card';
-import Input from '../../components/ui/Input';
-import Button from '../../components/ui/Button';
 import { useCartStore } from '../../store/cartStore';
 import { useProductStore } from '../../store/productStore';
+import { supabase } from '../../lib/supabase';
+
+// Simplified shop type for filter dropdown
+type ShopFilterOption = {
+  id: string;
+  name: string;
+  is_verified: boolean;
+};
 
 const StorePage: React.FC = () => {
   const navigate = useNavigate();
@@ -15,12 +21,46 @@ const StorePage: React.FC = () => {
   const [sortBy, setSortBy] = useState('featured');
   const [showFilters, setShowFilters] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
+  const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
+  const [activeShops, setActiveShops] = useState<ShopFilterOption[]>([]);
+  const [shopsLoading, setShopsLoading] = useState(false);
   const { getTotalItems } = useCartStore();
-  const { products, loading, fetchProducts } = useProductStore();
+  const { products, loading, fetchProducts, setShopFilter } = useProductStore();
 
+  // Fetch active shops for the vendor filter
+  // Requirements: 10.3 - Support filtering by vendor shop
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    const fetchActiveShops = async () => {
+      setShopsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('vendor_shops')
+          .select('id, name, is_verified')
+          .eq('status', 'active')
+          .order('name');
+        
+        if (error) throw error;
+        setActiveShops(data || []);
+      } catch (error) {
+        console.error('Error fetching active shops:', error);
+      } finally {
+        setShopsLoading(false);
+      }
+    };
+
+    fetchActiveShops();
+  }, []);
+
+  // Fetch products when shop filter changes
+  useEffect(() => {
+    fetchProducts({ shopId: selectedShopId || undefined });
+    setShopFilter(selectedShopId);
+  }, [fetchProducts, selectedShopId, setShopFilter]);
+
+  // Handle shop filter change
+  const handleShopFilterChange = (shopId: string | null) => {
+    setSelectedShopId(shopId);
+  };
 
   const filteredProducts = products
     .filter((product) => {
@@ -133,6 +173,47 @@ const StorePage: React.FC = () => {
                 ))}
               </select>
             </div>
+            
+            {/* Vendor Shop Filter - Requirements: 10.3 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Filter by Vendor
+              </label>
+              <select
+                value={selectedShopId || ''}
+                onChange={(e) => handleShopFilterChange(e.target.value || null)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                disabled={shopsLoading}
+              >
+                <option value="">All Vendors</option>
+                {activeShops.map(shop => (
+                  <option key={shop.id} value={shop.id}>
+                    {shop.name} {shop.is_verified ? '✓' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+        
+        {/* Active Shop Filter Badge */}
+        {selectedShopId && (
+          <div className="flex items-center justify-center mb-2 max-w-[350px] mx-auto">
+            <div className="inline-flex items-center bg-[#0F9D58]/10 text-[#0F9D58] px-3 py-1 rounded-full text-sm">
+              <Store size={14} className="mr-1" />
+              <span className="mr-2">
+                {activeShops.find(s => s.id === selectedShopId)?.name || 'Vendor'}
+              </span>
+              {activeShops.find(s => s.id === selectedShopId)?.is_verified && (
+                <BadgeCheck size={14} className="text-blue-500 mr-1" />
+              )}
+              <button
+                onClick={() => handleShopFilterChange(null)}
+                className="ml-1 hover:bg-[#0F9D58]/20 rounded-full p-0.5"
+              >
+                <X size={14} />
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -201,7 +282,11 @@ const StorePage: React.FC = () => {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              {selectedCategory === 'all' ? 'All Products' : categories.find(c => c.value === selectedCategory)?.label}
+              {selectedShopId 
+                ? `${activeShops.find(s => s.id === selectedShopId)?.name || 'Vendor'}'s Products`
+                : selectedCategory === 'all' 
+                  ? 'All Products' 
+                  : categories.find(c => c.value === selectedCategory)?.label}
             </h2>
             <span className="text-sm text-gray-500 dark:text-gray-400">
               {filteredProducts.length} found

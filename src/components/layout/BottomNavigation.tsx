@@ -1,39 +1,54 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, ShoppingBag, TrendingUp, User } from 'lucide-react';
+import { Home, ShoppingBag, TrendingUp, User, Store } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { useVendorStore } from '../../store/vendorStore';
 import { cn } from '../../lib/utils';
 
-const navigationItems = [
-  {
-    name: 'Home',
-    path: '/',
-    icon: Home,
-  },
-  {
-    name: 'Shop',
-    path: '/store',
-    icon: ShoppingBag,
-  },
-  {
-    name: 'Refer & Earn',
-    path: '/refer',
-    icon: TrendingUp,
-  },
-  {
-    name: 'Profile',
-    path: '/profile',
-    icon: User,
-  },
-];
-
 const BottomNavigation: React.FC = () => {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
+  const { shop, fetchShop } = useVendorStore();
+
+  // Fetch vendor shop status when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      fetchShop(user.id);
+    }
+  }, [isAuthenticated, user?.id, fetchShop]);
 
   // Only show bottom navigation when user is authenticated
   if (!isAuthenticated) {
     return null;
   }
+
+  // Build navigation items dynamically based on vendor status
+  const navigationItems = [
+    {
+      name: 'Home',
+      path: '/',
+      icon: Home,
+    },
+    {
+      name: 'Shop',
+      path: '/store',
+      icon: ShoppingBag,
+    },
+    // Conditionally add vendor dashboard for vendors
+    ...(shop ? [{
+      name: 'My Shop',
+      path: '/vendor/dashboard',
+      icon: Store,
+    }] : [{
+      name: 'Refer & Earn',
+      path: '/refer',
+      icon: TrendingUp,
+    }]),
+    {
+      name: 'Profile',
+      path: '/profile',
+      icon: User,
+    },
+  ];
 
   return (
     <div className="fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex items-center justify-around z-50 px-2 sm:px-6 safe-area-pb">

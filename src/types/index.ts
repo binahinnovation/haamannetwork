@@ -21,7 +21,7 @@ export type User = {
 export type Transaction = {
   id: string;
   userId: string;
-  type: 'airtime' | 'data' | 'electricity' | 'waec' | 'wallet_funding' | 'product_purchase' | 'referral_bonus' | 'referral_reward';
+  type: 'airtime' | 'data' | 'electricity' | 'waec' | 'wallet_funding' | 'product_purchase' | 'referral_bonus' | 'referral_reward' | 'shop_setup_fee' | 'shop_subscription';
   amount: number;
   status: 'success' | 'pending' | 'failed';
   reference: string;
@@ -47,6 +47,12 @@ export type Product = {
   is_new: boolean;
   is_featured: boolean;
   created_at: string;
+  // Vendor marketplace fields
+  shop_id?: string | null;
+  is_vendor_product: boolean;
+  // Joined fields from queries
+  shop_name?: string;
+  shop_is_verified?: boolean;
 };
 
 export type Order = {
@@ -159,3 +165,7 @@ export type TicketMessage = {
     name: string;
   };
 };
+
+
+// Re-export vendor types
+export * from './vendor';

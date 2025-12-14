@@ -45,6 +45,14 @@ import WalletManagement from './pages/admin/WalletManagement';
 import DataPlansManagement from './pages/admin/DataPlansManagement';
 import VirtualAccountManagement from './pages/admin/VirtualAccountManagement';
 import SupportTicketsManagement from './pages/admin/SupportTicketsManagement';
+import AdminVendorManagement from './pages/admin/AdminVendorManagement';
+import AdminMarketplaceSettings from './pages/admin/AdminMarketplaceSettings';
+
+// Vendor Pages
+import VendorOnboarding from './pages/vendor/VendorOnboarding';
+import VendorDashboard from './pages/vendor/VendorDashboard';
+import VendorProducts from './pages/vendor/VendorProducts';
+import VendorShopPage from './pages/vendor/VendorShopPage';
 
 import { useAuthStore } from './store/authStore';
 import { useAppSettingsStore } from './store/appSettingsStore';
@@ -90,6 +98,16 @@ function App() {
         <Route path="/admin/data-plans" element={<DataPlansManagement />} />
         <Route path="/admin/virtual-accounts" element={<VirtualAccountManagement />} />
         <Route path="/admin/support-tickets" element={<SupportTicketsManagement />} />
+        <Route path="/admin/vendors" element={<AdminVendorManagement />} />
+        <Route path="/admin/marketplace-settings" element={<AdminMarketplaceSettings />} />
+
+        {/* Vendor Routes */}
+        <Route path="/vendor/onboard" element={<VendorOnboarding />} />
+        <Route path="/vendor/dashboard" element={<VendorDashboard />} />
+        <Route path="/vendor/products" element={<VendorProducts />} />
+        
+        {/* Public Vendor Shop Page - Requirement 4.1 */}
+        <Route path="/shop/:shopId" element={<VendorShopPage />} />
 
         {/* Coming Soon Route */}
         <Route path="/coming-soon" element={<ComingSoonPage />} />

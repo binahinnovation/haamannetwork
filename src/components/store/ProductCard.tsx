@@ -1,28 +1,11 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Star, Heart, ShoppingCart } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Star, Heart, ShoppingCart, BadgeCheck, Store } from 'lucide-react';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
-import Button from '../ui/Button';
 import { formatCurrency } from '../../lib/utils';
 import { useCartStore } from '../../store/cartStore';
-
-type Product = {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  original_price?: number;
-  image_url: string;
-  category: string;
-  in_stock: boolean;
-  rating: number;
-  reviews: number;
-  discount: number;
-  is_new: boolean;
-  is_featured: boolean;
-  created_at: string;
-};
+import type { Product } from '../../types';
 
 type ProductCardProps = {
   product: Product;
@@ -90,6 +73,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <h3 className="text-sm font-medium line-clamp-2 mb-2 text-gray-900 dark:text-white">
           {product.name}
         </h3>
+        
+        {/* Vendor Info - Requirements: 4.1, 10.2 */}
+        {product.is_vendor_product && product.shop_id && product.shop_name && (
+          <Link
+            to={`/shop/${product.shop_id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center space-x-1 mb-2 text-xs text-gray-500 dark:text-gray-400 hover:text-[#0F9D58] transition-colors"
+          >
+            <Store size={12} />
+            <span className="truncate">{product.shop_name}</span>
+            {product.shop_is_verified && (
+              <BadgeCheck size={12} className="text-blue-500 flex-shrink-0" />
+            )}
+          </Link>
+        )}
         
         {/* Rating */}
         {product.rating > 0 && (

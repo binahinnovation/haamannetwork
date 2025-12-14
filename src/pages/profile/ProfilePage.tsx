@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Mail, Phone, LogOut, Edit2, CreditCard, Shield, AlertTriangle, Lock, Key } from 'lucide-react';
+import { User, Mail, Phone, LogOut, Edit2, CreditCard, Shield, AlertTriangle, Lock, Key, Store, CheckCircle } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { useAuthStore } from '../../store/authStore';
+import { useVendorStore } from '../../store/vendorStore';
 import SetPinModal from '../../components/ui/SetPinModal';
 
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout, updateUser, createVirtualAccount } = useAuthStore();
+  const { shop, loading: vendorLoading, fetchShop } = useVendorStore();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -21,6 +23,13 @@ const ProfilePage: React.FC = () => {
   const [virtualAccountError, setVirtualAccountError] = useState('');
   const [showSetPinModal, setShowSetPinModal] = useState(false);
   const [isChangingPin, setIsChangingPin] = useState(false);
+
+  // Fetch vendor shop status
+  useEffect(() => {
+    if (user?.id) {
+      fetchShop(user.id);
+    }
+  }, [user?.id, fetchShop]);
 
   if (!user) {
     navigate('/login');
@@ -181,6 +190,62 @@ const ProfilePage: React.FC = () => {
                 <p className="font-medium">{user.phone || 'Not provided'}</p>
               </div>
             </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Vendor Status Section */}
+      <Card className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold flex items-center">
+            <Store size={18} className="mr-2 text-[#0F9D58]" />
+            Vendor Status
+          </h2>
+        </div>
+
+        {vendorLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
+          </div>
+        ) : shop ? (
+          <div>
+            <div className="flex items-center space-x-2 mb-3">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                <CheckCircle size={14} className="mr-1" />
+                Vendor
+              </span>
+              {shop.is_verified && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                  <CheckCircle size={14} className="mr-1" />
+                  Verified
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              You have a vendor shop: <span className="font-medium">{shop.name}</span>
+            </p>
+            <Button
+              variant="primary"
+              onClick={() => navigate('/vendor/dashboard')}
+              className="w-full"
+              icon={<Store size={16} />}
+            >
+              Go to Vendor Dashboard
+            </Button>
+          </div>
+        ) : (
+          <div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Start selling on our marketplace by becoming a vendor. Create your own shop and list products for customers to purchase.
+            </p>
+            <Button
+              variant="primary"
+              onClick={() => navigate('/vendor/onboard')}
+              className="w-full"
+              icon={<Store size={16} />}
+            >
+              Become a Vendor
+            </Button>
           </div>
         )}
       </Card>
