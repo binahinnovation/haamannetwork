@@ -123,6 +123,10 @@ const getTransactionLabel = (type: string, details: any) => {
       if (details.flutterwave_data?.meta_data?.originatorname) {
         return `Wallet Funding from ${details.flutterwave_data.meta_data.originatorname} (${details.payment_method || 'bank_transfer'})`;
       }
+      if (details.provider === 'paymentpoint') {
+        const source = details.sender_name || details.bank || 'Virtual Account';
+        return `Wallet Funding via ${source}`;
+      }
       return `Wallet Funding (${details.method || details.payment_method || 'wallet'})`;
     case 'product_purchase':
       return `Product Purchase - ${details.product_name || 'Product'}`;

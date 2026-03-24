@@ -61,7 +61,7 @@ serve(async (req) => {
     }
 
     const receiverAccount = payload.receiver?.account_number;
-    const amount = payload.settlement_amount || payload.amount_paid;
+    const amount = payload.amount_paid || payload.settlement_amount;
     const transactionId = payload.transaction_id;
 
     if (!receiverAccount || !amount) {
