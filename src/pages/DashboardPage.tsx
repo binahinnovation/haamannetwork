@@ -248,10 +248,10 @@ const DashboardPage: React.FC = () => {
     const triggerGlobalAccountCreation = async () => {
       if (!user?.id || isCreatingAccount) return;
       
-      // Auto-create if ANY PaymentPoint account is missing
-      const isMissingAny = !user.palmpayAccountNumber || !user.opayAccountNumber;
+      // Auto-create only if BOTH are missing (stops loop if OPay is unavailable at provider level)
+      const hasAnyPaymentPointAccount = user.palmpayAccountNumber || user.opayAccountNumber;
       
-      if (isMissingAny && !hasAttemptedCreation['global']) {
+      if (!hasAnyPaymentPointAccount && !hasAttemptedCreation['global']) {
         console.log("Auto-triggering virtual account generation on login...");
         setIsCreatingAccount(true);
         setHasAttemptedCreation(prev => ({ ...prev, global: true }));
