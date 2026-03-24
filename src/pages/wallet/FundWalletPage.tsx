@@ -194,7 +194,7 @@ const FundWalletPage: React.FC = () => {
       </div>
 
       <div className="p-4 space-y-8">
-        {(user?.virtualAccountNumber || user?.palmpayAccountNumber || user?.opayAccountNumber || isCreatingAccount) ? (
+        {user?.id ? (
           <>
             {/* Virtual Account Details */}
             <Card className="p-6 bg-gradient-to-br from-[#0F9D58]/10 to-[#0d8a4f]/5">
@@ -252,32 +252,35 @@ const FundWalletPage: React.FC = () => {
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Account Number</p>
                   <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
                     <p className="font-bold text-xl text-gray-900 dark:text-white tracking-wider">
-                      {isCreatingAccount ? (
-                        <div className="flex items-center space-x-2">
-                          <RefreshCw size={18} className="animate-spin text-green-600" />
-                          <span>Generating...</span>
-                        </div>
+                      {isCreatingAccount && !currentProvider.accountNumber ? (
+                        <span className="flex items-center space-x-2">
+                          <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                          <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                          <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce"></span>
+                        </span>
                       ) : (
-                        currentProvider.accountNumber || (hasAttemptedCreation[selectedProvider] ? 'Not returned by provider' : 'Generation failed')
+                        currentProvider.accountNumber || 'Generating...'
                       )}
                     </p>
-                    <button
-                      onClick={copyAccountNumber}
-                      className={`p-2 rounded-lg transition-colors ${
-                        copied 
-                          ? 'bg-green-500 text-white' 
-                          : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500'
-                      }`}
-                    >
-                      {copied ? <CheckCircle size={18} /> : <Copy size={18} />}
-                    </button>
+                    {currentProvider.accountNumber && (
+                      <button
+                        onClick={copyAccountNumber}
+                        className={`p-2 rounded-lg transition-colors ${
+                          copied 
+                            ? 'bg-green-500 text-white' 
+                            : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500'
+                        }`}
+                      >
+                        {copied ? <CheckCircle size={18} /> : <Copy size={18} />}
+                      </button>
+                    )}
                   </div>
                 </div>
 
                 <div className="mb-4">
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Account Name</p>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {currentProvider.accountName}
+                    {isCreatingAccount && !currentProvider.accountNumber ? 'Loading...' : currentProvider.accountName}
                   </p>
                   {/* Debug info - remove in production */}
                   {import.meta.env.DEV && (

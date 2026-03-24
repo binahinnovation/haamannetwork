@@ -484,7 +484,7 @@ const DashboardPage: React.FC = () => {
             </div>
 
             {/* Virtual Account Details */}
-            {(user?.virtualAccountNumber || user?.palmpayAccountNumber || user?.opayAccountNumber || isCreatingAccount) && (
+            {user?.id && (
               <div className="pt-4 border-t border-white border-opacity-30">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-xs sm:text-sm opacity-90 font-medium">💳 Fund Wallet</p>
@@ -512,71 +512,60 @@ const DashboardPage: React.FC = () => {
                 </div>
                 
                 <div className="bg-white bg-opacity-15 backdrop-blur-sm rounded-xl p-4 space-y-3">
-                  {isCreatingAccount ? (
-                    <div className="text-center py-6">
-                      <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                      <p className="text-sm font-medium">Generating Account...</p>
-                      <p className="text-xs opacity-75">Please wait while we set up your {currentProvider.name} account</p>
+                  {/* Bank Name */}
+                  <div>
+                    <p className="text-xs opacity-75 mb-1">Bank Name</p>
+                    <p className="text-lg sm:text-xl font-bold tracking-wide">
+                      {isCreatingAccount && !currentProvider.accountNumber ? 'Loading...' : currentProvider.bankName}
+                    </p>
+                  </div>
+                  
+                  {/* Account Number */}
+                  <div>
+                    <p className="text-xs opacity-75 mb-1">Account Number</p>
+                    <div className="flex items-center justify-between bg-white bg-opacity-20 rounded-lg p-3">
+                      <span className="text-xl sm:text-2xl font-bold font-mono tracking-wider">
+                        {isCreatingAccount && !currentProvider.accountNumber ? (
+                          <span className="flex items-center space-x-2">
+                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce"></span>
+                          </span>
+                        ) : currentProvider.accountNumber || 'Generating...'}
+                      </span>
+                      {currentProvider.accountNumber && (
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(currentProvider.accountNumber || '');
+                            const btn = document.activeElement as HTMLButtonElement;
+                            const originalText = btn.innerHTML;
+                            btn.innerHTML = '✓';
+                            setTimeout(() => {
+                              btn.innerHTML = originalText;
+                            }, 1000);
+                          }}
+                          className="ml-3 p-2 bg-white bg-opacity-30 hover:bg-opacity-40 rounded-lg transition-all active:scale-95"
+                          title="Copy account number"
+                        >
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
-                  ) : currentProvider.available && currentProvider.accountNumber ? (
-                    <>
-                      {/* Bank Name */}
-                      <div>
-                        <p className="text-xs opacity-75 mb-1">Bank Name</p>
-                        <p className="text-lg sm:text-xl font-bold tracking-wide">{currentProvider.bankName}</p>
-                      </div>
-                      
-                      {/* Account Number */}
-                      <div>
-                        <p className="text-xs opacity-75 mb-1">Account Number</p>
-                        <div className="flex items-center justify-between bg-white bg-opacity-20 rounded-lg p-3">
-                          <span className="text-xl sm:text-2xl font-bold font-mono tracking-wider">{currentProvider.accountNumber}</span>
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(currentProvider.accountNumber || '');
-                              // Show a better feedback
-                              const btn = document.activeElement as HTMLButtonElement;
-                              const originalText = btn.innerHTML;
-                              btn.innerHTML = '✓';
-                              setTimeout(() => {
-                                btn.innerHTML = originalText;
-                              }, 1000);
-                            }}
-                            className="ml-3 p-2 bg-white bg-opacity-30 hover:bg-opacity-40 rounded-lg transition-all active:scale-95"
-                            title="Copy account number"
-                          >
-                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                      
-                      {/* Info Text */}
-                      <div className="flex items-start space-x-2 bg-white bg-opacity-10 rounded-lg p-2.5">
-                        <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                        </svg>
-                        <p className="text-xs opacity-90 leading-relaxed">
-                          Transfer any amount to this account and your wallet will be credited automatically
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center py-6">
-                      <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <RefreshCw size={24} className="animate-spin" />
-                      </div>
-                      <p className="text-sm font-medium mb-1">Account Generation Pending</p>
-                      <p className="text-xs opacity-75">Click to retry or wait a moment</p>
-                      <Button 
-                        onClick={() => refreshUserData()} 
-                        className="mt-3 bg-white text-green-600 hover:bg-gray-100 py-1 px-4 text-xs h-8"
-                      >
-                        Refresh
-                      </Button>
-                    </div>
-                  )}
+                  </div>
+                  
+                  {/* Info Text */}
+                  <div className="flex items-start space-x-2 bg-white bg-opacity-10 rounded-lg p-2.5">
+                    <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-xs opacity-90 leading-relaxed">
+                      {isCreatingAccount && !currentProvider.accountNumber 
+                        ? "Setting up your virtual account. Please wait a moment..."
+                        : "Transfer any amount to this account and your wallet will be credited automatically"}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
