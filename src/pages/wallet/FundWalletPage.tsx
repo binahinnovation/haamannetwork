@@ -194,7 +194,7 @@ const FundWalletPage: React.FC = () => {
       </div>
 
       <div className="p-4 space-y-8">
-        {user?.virtualAccountNumber ? (
+        {(user?.virtualAccountNumber || user?.palmpayAccountNumber || user?.opayAccountNumber || isCreatingAccount) ? (
           <>
             {/* Virtual Account Details */}
             <Card className="p-6 bg-gradient-to-br from-[#0F9D58]/10 to-[#0d8a4f]/5">
@@ -290,7 +290,7 @@ const FundWalletPage: React.FC = () => {
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Balance</p>
                   <p className="font-bold text-xl text-[#0F9D58]">
-                    {formatCurrency(user.walletBalance)}
+                    {formatCurrency(user?.walletBalance || 0)}
                   </p>
                 </div>
               </div>

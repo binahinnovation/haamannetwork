@@ -484,7 +484,7 @@ const DashboardPage: React.FC = () => {
             </div>
 
             {/* Virtual Account Details */}
-            {user?.virtualAccountNumber && user?.virtualAccountBankName && (
+            {(user?.virtualAccountNumber || user?.palmpayAccountNumber || user?.opayAccountNumber || isCreatingAccount) && (
               <div className="pt-4 border-t border-white border-opacity-30">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-xs sm:text-sm opacity-90 font-medium">💳 Fund Wallet</p>
