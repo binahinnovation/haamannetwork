@@ -24,7 +24,7 @@ export async function getMarketplaceSettings(): Promise<MarketplaceSettings | nu
   const { data, error } = await supabase
     .from('marketplace_settings')
     .select('*')
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('Error fetching marketplace settings:', error);
@@ -44,7 +44,7 @@ export async function getUserWalletBalance(userId: string): Promise<number | nul
     .from('profiles')
     .select('wallet_balance')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('Error fetching wallet balance:', error);
@@ -64,7 +64,7 @@ export async function getShopByUserId(userId: string): Promise<VendorShop | null
     .from('vendor_shops')
     .select('*')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     if (error.code === 'PGRST116') {
@@ -213,7 +213,7 @@ export async function updateShop(
     .eq('id', shopId)
     .eq('user_id', userId)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('Error updating shop:', error);
@@ -233,7 +233,7 @@ export async function getShopById(shopId: string): Promise<VendorShop | null> {
     .from('vendor_shops')
     .select('*')
     .eq('id', shopId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('Error fetching shop by ID:', error);
@@ -278,7 +278,7 @@ export async function processSubscription(shopId: string): Promise<SubscriptionR
     .from('vendor_shops')
     .select('*, profiles!vendor_shops_user_id_fkey(wallet_balance)')
     .eq('id', shopId)
-    .single();
+    .maybeSingle();
 
   if (shopError || !shop) {
     console.error('Error fetching shop for billing:', shopError);
@@ -449,7 +449,7 @@ export async function attemptShopReactivation(userId: string): Promise<Subscript
     .eq('user_id', userId)
     .eq('status', 'disabled')
     .eq('admin_override', false)
-    .single();
+    .maybeSingle();
 
   if (shopError || !shop) {
     // No disabled shop found or shop is admin-disabled

@@ -24,6 +24,7 @@ type AuthState = {
   checkAuth: () => Promise<void>;
   refreshUserData: () => Promise<void>;
   createVirtualAccount: (userId: string, email: string, firstName: string, lastName: string, phoneNumber?: string, bvn?: string) => Promise<void>;
+  createPaymentPointAccounts: (userId: string) => Promise<void>;
   initRealtimeSubscription: () => void;
   cleanupRealtimeSubscription: () => void;
   verifyReferralCode: (code: string) => Promise<boolean>;
@@ -123,6 +124,11 @@ export const useAuthStore = create<AuthState>()(
                         virtualAccountBankName: existingProfile.virtual_account_bank_name,
                         virtualAccountNumber: existingProfile.virtual_account_number,
                         virtualAccountReference: existingProfile.virtual_account_reference,
+                        opayAccountNumber: existingProfile.opay_account_number,
+                        opayAccountName: existingProfile.opay_account_name,
+                        palmpayAccountNumber: existingProfile.palmpay_account_number,
+                        palmpayAccountName: existingProfile.palmpay_account_name,
+                        paymentpointCustomerId: existingProfile.paymentpoint_customer_id,
                         bvn: existingProfile.bvn,
                         hasPin: !!existingProfile.transaction_pin,
                       },
@@ -183,6 +189,11 @@ export const useAuthStore = create<AuthState>()(
                   virtualAccountBankName: profile.virtual_account_bank_name,
                   virtualAccountNumber: profile.virtual_account_number,
                   virtualAccountReference: profile.virtual_account_reference,
+                  opayAccountNumber: profile.opay_account_number,
+                  opayAccountName: profile.opay_account_name,
+                  palmpayAccountNumber: profile.palmpay_account_number,
+                  palmpayAccountName: profile.palmpay_account_name,
+                  paymentpointCustomerId: profile.paymentpoint_customer_id,
                   bvn: profile.bvn,
                   hasPin: !!profile.transaction_pin,
                 },
@@ -337,6 +348,11 @@ export const useAuthStore = create<AuthState>()(
                     virtualAccountBankName: existingProfile.virtual_account_bank_name,
                     virtualAccountNumber: existingProfile.virtual_account_number,
                     virtualAccountReference: existingProfile.virtual_account_reference,
+                    opayAccountNumber: existingProfile.opay_account_number,
+                    opayAccountName: existingProfile.opay_account_name,
+                    palmpayAccountNumber: existingProfile.palmpay_account_number,
+                    palmpayAccountName: existingProfile.palmpay_account_name,
+                    paymentpointCustomerId: existingProfile.paymentpoint_customer_id,
                     bvn: existingProfile.bvn,
                     hasPin: !!existingProfile.transaction_pin,
                   },
@@ -400,6 +416,11 @@ export const useAuthStore = create<AuthState>()(
               virtualAccountBankName: profileData.virtual_account_bank_name,
               virtualAccountNumber: profileData.virtual_account_number,
               virtualAccountReference: profileData.virtual_account_reference,
+              opayAccountNumber: profileData.opay_account_number,
+              opayAccountName: profileData.opay_account_name,
+              palmpayAccountNumber: profileData.palmpay_account_number,
+              palmpayAccountName: profileData.palmpay_account_name,
+              paymentpointCustomerId: profileData.paymentpoint_customer_id,
               bvn: profileData.bvn,
               hasPin: false,
             };
@@ -678,6 +699,11 @@ export const useAuthStore = create<AuthState>()(
                 virtualAccountBankName: profile.virtual_account_bank_name,
                 virtualAccountNumber: profile.virtual_account_number,
                 virtualAccountReference: profile.virtual_account_reference,
+                opayAccountNumber: profile.opay_account_number,
+                opayAccountName: profile.opay_account_name,
+                palmpayAccountNumber: profile.palmpay_account_number,
+                palmpayAccountName: profile.palmpay_account_name,
+                paymentpointCustomerId: profile.paymentpoint_customer_id,
                 bvn: profile.bvn,
                 hasPin: !!profile.transaction_pin,
               },
@@ -748,6 +774,11 @@ export const useAuthStore = create<AuthState>()(
                       virtualAccountBankName: existingProfile.virtual_account_bank_name,
                       virtualAccountNumber: existingProfile.virtual_account_number,
                       virtualAccountReference: existingProfile.virtual_account_reference,
+                      opayAccountNumber: existingProfile.opay_account_number,
+                      opayAccountName: existingProfile.opay_account_name,
+                      palmpayAccountNumber: existingProfile.palmpay_account_number,
+                      palmpayAccountName: existingProfile.palmpay_account_name,
+                      paymentpointCustomerId: existingProfile.paymentpoint_customer_id,
                       bvn: existingProfile.bvn,
                       hasPin: !!existingProfile.transaction_pin,
                     },
@@ -801,6 +832,11 @@ export const useAuthStore = create<AuthState>()(
                 virtualAccountBankName: profile.virtual_account_bank_name,
                 virtualAccountNumber: profile.virtual_account_number,
                 virtualAccountReference: profile.virtual_account_reference,
+                opayAccountNumber: profile.opay_account_number,
+                opayAccountName: profile.opay_account_name,
+                palmpayAccountNumber: profile.palmpay_account_number,
+                palmpayAccountName: profile.palmpay_account_name,
+                paymentpointCustomerId: profile.paymentpoint_customer_id,
                 bvn: profile.bvn,
                 hasPin: !!profile.transaction_pin,
               },
@@ -871,6 +907,61 @@ export const useAuthStore = create<AuthState>()(
           return result.data;
         } catch (error) {
           console.error('Error creating virtual account:', error);
+          throw error;
+        }
+      },
+      
+      createPaymentPointAccounts: async (userId) => {
+        try {
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          if (!supabaseUrl) {
+            throw new Error('Supabase URL not configured');
+          }
+
+          // Get the current session for authentication
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            throw new Error('User not authenticated');
+          }
+
+          const response = await fetch(`${supabaseUrl}/functions/v1/create-paymentpoint-account`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ userId }),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to create PaymentPoint accounts: ${errorText}`);
+          }
+
+          const result = await response.json();
+          
+          if (!result.success) {
+            throw new Error(result.error || 'Failed to create PaymentPoint accounts');
+          }
+
+          // Realtime subscription or a simple refresh will update the state
+          // but we can also update it manually here if we have the data
+          if (result.data) {
+            set((state) => ({
+              user: state.user ? {
+                ...state.user,
+                opayAccountNumber: result.data.opay?.accountNumber,
+                opayAccountName: result.data.opay?.accountName,
+                palmpayAccountNumber: result.data.palmpay?.accountNumber,
+                palmpayAccountName: result.data.palmpay?.accountName,
+                paymentpointCustomerId: result.data.customerId,
+              } : null,
+            }));
+          }
+
+          return result.data;
+        } catch (error) {
+          console.error('Error creating PaymentPoint accounts:', error);
           throw error;
         }
       },
@@ -959,6 +1050,11 @@ export const useAuthStore = create<AuthState>()(
                       virtualAccountNumber: payload.new.virtual_account_number || state.user?.virtualAccountNumber,
                       virtualAccountBankName: payload.new.virtual_account_bank_name || state.user?.virtualAccountBankName,
                       virtualAccountReference: payload.new.virtual_account_reference || state.user?.virtualAccountReference,
+                      opayAccountNumber: payload.new.opay_account_number || state.user?.opayAccountNumber,
+                      opayAccountName: payload.new.opay_account_name || state.user?.opayAccountName,
+                      palmpayAccountNumber: payload.new.palmpay_account_number || state.user?.palmpayAccountNumber,
+                      palmpayAccountName: payload.new.palmpay_account_name || state.user?.palmpayAccountName,
+                      paymentpointCustomerId: payload.new.paymentpoint_customer_id || state.user?.paymentpointCustomerId,
                       bvn: payload.new.bvn !== undefined ? payload.new.bvn : state.user?.bvn,
                     } : null,
                   }));

@@ -28,11 +28,14 @@ import { formatCurrency } from '../lib/utils';
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, refreshUserData } = useAuthStore();
+  const { user, refreshUserData, createPaymentPointAccounts } = useAuthStore();
   const { config: serviceConfig, fetchConfig } = useServiceConfigStore();
   const { shop, fetchShop } = useVendorStore();
   const [showBalance, setShowBalance] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<'flutterwave' | 'opay' | 'palmpay'>('palmpay');
+  const [hasAttemptedCreation, setHasAttemptedCreation] = useState<Record<string, boolean>>({});
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return document.documentElement.classList.contains('dark');
   });
@@ -215,6 +218,61 @@ const DashboardPage: React.FC = () => {
     }
   };
 
+  // Virtual Account Providers
+  const virtualAccountProviders = {
+    palmpay: {
+      name: 'PalmPay',
+      bankName: user?.palmpayAccountName || 'PalmPay Limited',
+      accountNumber: user?.palmpayAccountNumber || '',
+      available: true,
+      isMissing: !user?.palmpayAccountNumber && !isCreatingAccount
+    },
+    opay: {
+      name: 'OPay',
+      bankName: user?.opayAccountName || 'OPay Digital Services Limited',
+      accountNumber: user?.opayAccountNumber || '',
+      available: true,
+      isMissing: !user?.opayAccountNumber && !isCreatingAccount
+    },
+    flutterwave: {
+      name: 'Flutterwave',
+      bankName: user?.virtualAccountBankName || 'WEMA BANK',
+      accountNumber: user?.virtualAccountNumber || '',
+      available: !!user?.virtualAccountNumber
+    }
+  };
+
+  const currentProvider = virtualAccountProviders[selectedProvider];
+
+  useEffect(() => {
+    const triggerGlobalAccountCreation = async () => {
+      if (!user?.id || isCreatingAccount) return;
+      
+      // Auto-create if ANY PaymentPoint account is missing
+      const isMissingAny = !user.palmpayAccountNumber || !user.opayAccountNumber;
+      
+      if (isMissingAny && !hasAttemptedCreation['global']) {
+        console.log("Auto-triggering virtual account generation on login...");
+        setIsCreatingAccount(true);
+        setHasAttemptedCreation(prev => ({ ...prev, global: true }));
+        
+        try {
+          await createPaymentPointAccounts(user.id);
+          // Wait longer for DB consistency
+          setTimeout(async () => {
+            await refreshUserData();
+          }, 3000);
+        } catch (error) {
+          console.error("Global account creation error:", error);
+        } finally {
+          setIsCreatingAccount(false);
+        }
+      }
+    };
+
+    triggerGlobalAccountCreation();
+  }, [user?.id, user?.opayAccountNumber, user?.palmpayAccountNumber, createPaymentPointAccounts, refreshUserData, hasAttemptedCreation]);
+
   const handleComingSoonNavigation = (serviceName: string, serviceDescription: string) => {
     navigate('/coming-soon', { 
       state: { 
@@ -228,27 +286,30 @@ const DashboardPage: React.FC = () => {
     return serviceConfig[serviceId] || 'active';
   };
 
-  const mainServices = [
+  const allServices = [
     {
       title: 'Airtime',
       icon: <Phone size={20} />,
       path: '/services/airtime',
       color: 'bg-green-100 text-green-600',
-      id: 'airtime'
+      id: 'airtime',
+      featured: true
     },
     {
       title: 'Data',
       icon: <Wifi size={20} />,
       path: '/services/data',
       color: 'bg-green-100 text-green-600',
-      id: 'data'
+      id: 'data',
+      featured: true
     },
     {
       title: 'Electricity',
       icon: <Zap size={20} />,
       path: '/services/electricity',
       color: 'bg-green-100 text-green-600',
-      id: 'electricity'
+      id: 'electricity',
+      featured: false
     },
     {
       title: 'TV',
@@ -256,39 +317,33 @@ const DashboardPage: React.FC = () => {
       path: '/services/tv',
       color: 'bg-green-100 text-green-600',
       id: 'tv',
-      description: 'Pay for your TV subscriptions including DSTV, GOTV, and Startimes'
+      description: 'Pay for your TV subscriptions including DSTV, GOTV, and Startimes',
+      featured: false
     },
-  ];
-
-  const secondaryServices = [
     {
       title: 'Redeem Voucher',
       icon: <Gift size={20} />,
       path: '/voucher',
       color: 'bg-green-100 text-green-600',
       id: 'voucher',
-      description: 'Redeem your vouchers and gift cards for amazing rewards and discounts'
+      description: 'Redeem your vouchers and gift cards for amazing rewards and discounts',
+      featured: false
     },
     {
       title: 'Support',
       icon: <MessageCircle size={20} />,
       path: '/support',
       color: 'bg-green-100 text-green-600',
-      id: 'support'
+      id: 'support',
+      featured: false
     },
     {
       title: 'Refer & Earn',
       icon: <Users size={20} />,
       path: '/refer',
       color: 'bg-green-100 text-green-600',
-      id: 'refer'
-    },
-    {
-      title: 'More',
-      icon: <MoreHorizontal size={20} />,
-      path: '/services',
-      color: 'bg-green-100 text-green-600',
-      id: 'more'
+      id: 'refer',
+      featured: false
     },
   ];
 
@@ -304,7 +359,7 @@ const DashboardPage: React.FC = () => {
   ];
 
   // Filter services based on their status
-  const filteredMainServices = mainServices.filter(service => {
+  const filteredServices = allServices.filter(service => {
     const status = getServiceStatus(service.id);
     return status !== 'disabled';
   }).map(service => {
@@ -315,18 +370,8 @@ const DashboardPage: React.FC = () => {
     };
   });
 
-  const filteredSecondaryServices = secondaryServices.filter(service => {
-    if (service.id === 'more') return true; // Always show "More" option
-    const status = getServiceStatus(service.id);
-    return status !== 'disabled';
-  }).map(service => {
-    if (service.id === 'more') return { ...service, comingSoon: false }; // Don't modify "More" option
-    const status = getServiceStatus(service.id);
-    return {
-      ...service,
-      comingSoon: status === 'coming_soon'
-    };
-  });
+  // Get featured services (Airtime and Data only)
+  const featuredServices = filteredServices.filter(service => service.featured);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -393,56 +438,157 @@ const DashboardPage: React.FC = () => {
             </button>
           </div>
           
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-            <div className="flex-1 min-w-0">
-              <p className="text-xl sm:text-3xl font-bold truncate">
-                {showBalance ? formatCurrency(user?.walletBalance || 0) : '****'}
-              </p>
+          <div className="flex flex-col space-y-4">
+            {/* Balance Amount */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+              <div className="flex-1 min-w-0">
+                <p className="text-xl sm:text-3xl font-bold truncate">
+                  {showBalance ? formatCurrency(user?.walletBalance || 0) : '****'}
+                </p>
+              </div>
+              
+              <div className="w-full sm:w-auto flex-shrink-0 flex gap-2">
+                <Button
+                  onClick={() => navigate('/wallet/fund')}
+                  className="flex-1 sm:flex-none bg-white text-green-600 hover:bg-gray-100 px-3 sm:px-6 py-2 rounded-full font-medium text-xs sm:text-sm"
+                >
+                  Add Money
+                </Button>
+                {/* Debug buttons - only show for admin users */}
+                {user?.isAdmin && (
+                  <div className="flex gap-1">
+                    <Button
+                      onClick={testWalletUpdate}
+                      className="bg-yellow-500 text-white hover:bg-yellow-600 px-2 py-2 rounded-full font-medium text-xs"
+                      title="Test wallet update (Admin only)"
+                    >
+                      Test
+                    </Button>
+                    <Button
+                      onClick={debugWalletIssue}
+                      className="bg-red-500 text-white hover:bg-red-600 px-2 py-2 rounded-full font-medium text-xs"
+                      title="Debug wallet issue (Admin only)"
+                    >
+                      Debug
+                    </Button>
+                    <Button
+                      onClick={fixWalletBalance}
+                      className="bg-blue-500 text-white hover:bg-blue-600 px-2 py-2 rounded-full font-medium text-xs"
+                      title="Fix wallet balance (Admin only)"
+                    >
+                      Fix
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
-            
-            <div className="w-full sm:w-auto flex-shrink-0 flex gap-2">
-              <Button
-                onClick={() => navigate('/wallet/fund')}
-                className="flex-1 sm:flex-none bg-white text-green-600 hover:bg-gray-100 px-3 sm:px-6 py-2 rounded-full font-medium text-xs sm:text-sm"
-              >
-                Add Money
-              </Button>
-              {/* Debug buttons - only show for admin users */}
-              {user?.isAdmin && (
-                <div className="flex gap-1">
-                  <Button
-                    onClick={testWalletUpdate}
-                    className="bg-yellow-500 text-white hover:bg-yellow-600 px-2 py-2 rounded-full font-medium text-xs"
-                    title="Test wallet update (Admin only)"
-                  >
-                    Test
-                  </Button>
-                  <Button
-                    onClick={debugWalletIssue}
-                    className="bg-red-500 text-white hover:bg-red-600 px-2 py-2 rounded-full font-medium text-xs"
-                    title="Debug wallet issue (Admin only)"
-                  >
-                    Debug
-                  </Button>
-                  <Button
-                    onClick={fixWalletBalance}
-                    className="bg-blue-500 text-white hover:bg-blue-600 px-2 py-2 rounded-full font-medium text-xs"
-                    title="Fix wallet balance (Admin only)"
-                  >
-                    Fix
-                  </Button>
+
+            {/* Virtual Account Details */}
+            {user?.virtualAccountNumber && user?.virtualAccountBankName && (
+              <div className="pt-4 border-t border-white border-opacity-30">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs sm:text-sm opacity-90 font-medium">💳 Fund Wallet</p>
+                  
+                  {/* Provider Switcher */}
+                  <div className="flex items-center space-x-1 bg-white bg-opacity-20 rounded-lg p-1">
+                    {Object.entries(virtualAccountProviders).map(([key, provider]) => (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedProvider(key as 'flutterwave' | 'opay' | 'palmpay')}
+                        disabled={!provider.available}
+                        className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                          selectedProvider === key
+                            ? 'bg-white text-green-600 shadow-sm'
+                            : provider.available
+                            ? 'text-white opacity-70 hover:opacity-100'
+                            : 'text-white opacity-40 cursor-not-allowed'
+                        }`}
+                        title={!provider.available ? 'Coming soon' : provider.name}
+                      >
+                        {provider.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              )}
-            </div>
+                
+                <div className="bg-white bg-opacity-15 backdrop-blur-sm rounded-xl p-4 space-y-3">
+                  {isCreatingAccount ? (
+                    <div className="text-center py-6">
+                      <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                      <p className="text-sm font-medium">Generating Account...</p>
+                      <p className="text-xs opacity-75">Please wait while we set up your {currentProvider.name} account</p>
+                    </div>
+                  ) : currentProvider.available && currentProvider.accountNumber ? (
+                    <>
+                      {/* Bank Name */}
+                      <div>
+                        <p className="text-xs opacity-75 mb-1">Bank Name</p>
+                        <p className="text-lg sm:text-xl font-bold tracking-wide">{currentProvider.bankName}</p>
+                      </div>
+                      
+                      {/* Account Number */}
+                      <div>
+                        <p className="text-xs opacity-75 mb-1">Account Number</p>
+                        <div className="flex items-center justify-between bg-white bg-opacity-20 rounded-lg p-3">
+                          <span className="text-xl sm:text-2xl font-bold font-mono tracking-wider">{currentProvider.accountNumber}</span>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(currentProvider.accountNumber || '');
+                              // Show a better feedback
+                              const btn = document.activeElement as HTMLButtonElement;
+                              const originalText = btn.innerHTML;
+                              btn.innerHTML = '✓';
+                              setTimeout(() => {
+                                btn.innerHTML = originalText;
+                              }, 1000);
+                            }}
+                            className="ml-3 p-2 bg-white bg-opacity-30 hover:bg-opacity-40 rounded-lg transition-all active:scale-95"
+                            title="Copy account number"
+                          >
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {/* Info Text */}
+                      <div className="flex items-start space-x-2 bg-white bg-opacity-10 rounded-lg p-2.5">
+                        <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                        <p className="text-xs opacity-90 leading-relaxed">
+                          Transfer any amount to this account and your wallet will be credited automatically
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-6">
+                      <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <RefreshCw size={24} className="animate-spin" />
+                      </div>
+                      <p className="text-sm font-medium mb-1">Account Generation Pending</p>
+                      <p className="text-xs opacity-75">Click to retry or wait a moment</p>
+                      <Button 
+                        onClick={() => refreshUserData()} 
+                        className="mt-3 bg-white text-green-600 hover:bg-gray-100 py-1 px-4 text-xs h-8"
+                      >
+                        Refresh
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </Card>
       </div>
 
       {/* Services Grid */}
       <div className="px-3 sm:px-4 py-4 sm:py-6">
-        {/* Main Services */}
-        <div className="grid grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-6 sm:mb-8">
-          {filteredMainServices.map((service, index) => (
+        {/* Services */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-6 sm:mb-8">
+          {featuredServices.map((service, index) => (
             <button
               key={index}
               onClick={() => {
@@ -452,54 +598,37 @@ const DashboardPage: React.FC = () => {
                   navigate(service.path);
                 }
               }}
-              className="flex flex-col items-center space-y-1 sm:space-y-2 md:space-y-3 p-2 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow relative min-h-[80px] sm:min-h-[90px] md:min-h-[100px]"
+              className="flex flex-col items-center justify-center space-y-2 sm:space-y-3 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow relative min-h-[100px] sm:min-h-[110px]"
             >
               {service.comingSoon && (
                 <div className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs px-1 sm:px-1.5 py-0.5 rounded-full font-bold">
                   Soon
                 </div>
               )}
-              <div className={`w-8 sm:w-10 md:w-12 h-8 sm:h-10 md:h-12 rounded-full flex items-center justify-center ${service.color} flex-shrink-0`}>
-                <div className="w-4 sm:w-5 md:w-6 h-4 sm:h-5 md:h-6">
-                  {service.icon}
-                </div>
+              <div className={`w-10 sm:w-12 h-10 sm:h-12 rounded-full flex items-center justify-center ${service.color} flex-shrink-0`}>
+                {React.cloneElement(service.icon as React.ReactElement, { 
+                  size: 20,
+                  className: 'sm:w-6 sm:h-6'
+                })}
               </div>
-              <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 text-center leading-tight px-1 line-clamp-2">
+              <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 text-center leading-tight">
                 {service.title}
               </span>
             </button>
           ))}
-        </div>
 
-        {/* Secondary Services */}
-        <div className="grid grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-6 sm:mb-8">
-          {filteredSecondaryServices.map((service, index) => (
-            <button
-              key={index}
-              onClick={() => {
-                if (service.comingSoon) {
-                  handleComingSoonNavigation(service.title, service.description || '');
-                } else {
-                  navigate(service.path);
-                }
-              }}
-              className="flex flex-col items-center space-y-1 sm:space-y-2 md:space-y-3 p-2 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow relative min-h-[80px] sm:min-h-[90px] md:min-h-[100px]"
-            >
-              {service.comingSoon && (
-                <div className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs px-1 sm:px-1.5 py-0.5 rounded-full font-bold">
-                  Soon
-                </div>
-              )}
-              <div className={`w-8 sm:w-10 md:w-12 h-8 sm:h-10 md:h-12 rounded-full flex items-center justify-center ${service.color} flex-shrink-0`}>
-                <div className="w-4 sm:w-5 md:w-6 h-4 sm:h-5 md:h-6">
-                  {service.icon}
-                </div>
-              </div>
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 text-center leading-tight px-1 line-clamp-2">
-                {service.title}
-              </span>
-            </button>
-          ))}
+          {/* More Button - Navigate to Services Page */}
+          <button
+            onClick={() => navigate('/services')}
+            className="flex flex-col items-center justify-center space-y-2 sm:space-y-3 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-green-500 to-green-600 shadow-sm hover:shadow-md transition-shadow relative min-h-[100px] sm:min-h-[110px]"
+          >
+            <div className="w-10 sm:w-12 h-10 sm:h-12 rounded-full flex items-center justify-center bg-white bg-opacity-20 flex-shrink-0">
+              <MoreHorizontal size={20} className="text-white sm:w-6 sm:h-6" />
+            </div>
+            <span className="text-xs sm:text-sm font-medium text-white text-center leading-tight">
+              More
+            </span>
+          </button>
         </div>
 
         {/* Product Slideshow Section */}

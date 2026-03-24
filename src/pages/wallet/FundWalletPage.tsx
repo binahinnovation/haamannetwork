@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertCircle, Clock, Copy, RefreshCw, CreditCard, Wallet, Ban as Bank, CheckCircle, Info } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Copy, RefreshCw, CreditCard, Wallet, Ban as Bank, CheckCircle, Info } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { useAuthStore } from '../../store/authStore';
@@ -10,10 +10,13 @@ import { supabase } from '../../lib/supabase';
 
 const FundWalletPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, refreshUserData } = useAuthStore();
+  const { user, refreshUserData, createPaymentPointAccounts } = useAuthStore();
   const { siteName, footerEmail } = useAppSettingsStore();
   const [copied, setCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<'flutterwave' | 'opay' | 'palmpay'>('flutterwave');
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  const [hasAttemptedCreation, setHasAttemptedCreation] = useState<Record<string, boolean>>({});
   const [fundingCharges, setFundingCharges] = useState({
     enabled: false,
     type: 'percentage',
@@ -33,6 +36,62 @@ const FundWalletPage: React.FC = () => {
     }
     fetchFundingCharges();
   }, [user, refreshUserData]);
+
+  const virtualAccountProviders = {
+    palmpay: {
+      name: 'PalmPay',
+      bankName: user?.palmpayAccountName || 'PalmPay Limited',
+      accountNumber: user?.palmpayAccountNumber || '',
+      accountName: user?.palmpayAccountName || user?.name || '',
+      available: true,
+      isMissing: !user?.palmpayAccountNumber && !isCreatingAccount
+    },
+    opay: {
+      name: 'OPay',
+      bankName: user?.opayAccountName || 'OPay Digital Services Limited',
+      accountNumber: user?.opayAccountNumber || '',
+      accountName: user?.opayAccountName || user?.name || '',
+      available: true,
+      isMissing: !user?.opayAccountNumber && !isCreatingAccount
+    },
+    flutterwave: {
+      name: 'Flutterwave',
+      bankName: user?.virtualAccountBankName || 'WEMA BANK',
+      accountNumber: user?.virtualAccountNumber || 'Generating...',
+      accountName: `ArabNetwork - ${user?.name || ''}`,
+      available: !!user?.virtualAccountNumber
+    }
+  };
+
+  const currentProvider = virtualAccountProviders[selectedProvider];
+
+  useEffect(() => {
+    const triggerGlobalAccountCreation = async () => {
+      if (!user?.id || isCreatingAccount) return;
+      
+      // Auto-create if ANY PaymentPoint account is missing
+      const isMissingAny = !user.palmpayAccountNumber || !user.opayAccountNumber;
+      
+      if (isMissingAny && !hasAttemptedCreation['global']) {
+        console.log("Auto-triggering virtual account generation in FundWallet...");
+        setIsCreatingAccount(true);
+        setHasAttemptedCreation(prev => ({ ...prev, global: true }));
+        
+        try {
+          await createPaymentPointAccounts(user.id);
+          setTimeout(async () => {
+            await refreshUserData();
+          }, 3000);
+        } catch (error) {
+          console.error("Global account creation error (FundWallet):", error);
+        } finally {
+          setIsCreatingAccount(false);
+        }
+      }
+    };
+
+    triggerGlobalAccountCreation();
+  }, [user?.id, user?.opayAccountNumber, user?.palmpayAccountNumber, createPaymentPointAccounts, refreshUserData, hasAttemptedCreation]);
 
   const fetchFundingCharges = async () => {
     setLoadingCharges(true);
@@ -78,8 +137,9 @@ const FundWalletPage: React.FC = () => {
   };
 
   const copyAccountNumber = () => {
-    if (user?.virtualAccountNumber) {
-      navigator.clipboard.writeText(user.virtualAccountNumber);
+    const num = currentProvider.accountNumber;
+    if (num) {
+      navigator.clipboard.writeText(num);
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
     }
@@ -139,21 +199,39 @@ const FundWalletPage: React.FC = () => {
             {/* Virtual Account Details */}
             <Card className="p-6 bg-gradient-to-br from-[#0F9D58]/10 to-[#0d8a4f]/5">
               <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Virtual Account</h2>
+                <div className="flex-1">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Fund Your Wallet</h2>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Transfer to this account to fund your wallet
+                    Select a provider and transfer to the provided account
                   </p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefresh}
-                  isLoading={refreshing}
-                  icon={<RefreshCw size={16} />}
-                >
-                  Refresh
-                </Button>
+                <div className="flex flex-col items-end space-y-2">
+                  <div className="flex items-center space-x-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+                    {Object.entries(virtualAccountProviders).map(([key, provider]) => (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedProvider(key as 'flutterwave' | 'opay' | 'palmpay')}
+                        className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                          selectedProvider === key
+                            ? 'bg-white dark:bg-gray-600 text-green-600 dark:text-green-400 shadow-sm'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                        }`}
+                      >
+                        {provider.name}
+                      </button>
+                    ))}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRefresh}
+                    isLoading={refreshing}
+                    className="text-gray-500 h-8"
+                    icon={<RefreshCw size={14} />}
+                  >
+                    Refresh
+                  </Button>
+                </div>
               </div>
 
               <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 mb-4">
@@ -162,7 +240,7 @@ const FundWalletPage: React.FC = () => {
                     <Bank className="text-[#0F9D58] mr-3" size={24} />
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Bank Name</p>
-                      <p className="font-semibold text-gray-900 dark:text-white">{user.virtualAccountBankName}</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">{currentProvider.bankName}</p>
                     </div>
                   </div>
                   <div className="w-12 h-12 bg-[#0F9D58] rounded-lg flex items-center justify-center">
@@ -174,7 +252,14 @@ const FundWalletPage: React.FC = () => {
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Account Number</p>
                   <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
                     <p className="font-bold text-xl text-gray-900 dark:text-white tracking-wider">
-                      {user.virtualAccountNumber}
+                      {isCreatingAccount ? (
+                        <div className="flex items-center space-x-2">
+                          <RefreshCw size={18} className="animate-spin text-green-600" />
+                          <span>Generating...</span>
+                        </div>
+                      ) : (
+                        currentProvider.accountNumber || (hasAttemptedCreation[selectedProvider] ? 'Not returned by provider' : 'Generation failed')
+                      )}
                     </p>
                     <button
                       onClick={copyAccountNumber}
@@ -192,7 +277,7 @@ const FundWalletPage: React.FC = () => {
                 <div className="mb-4">
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Account Name</p>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    ArabNetwork - {user.name}
+                    {currentProvider.accountName}
                   </p>
                   {/* Debug info - remove in production */}
                   {import.meta.env.DEV && (
@@ -334,7 +419,7 @@ const FundWalletPage: React.FC = () => {
                   <div className="ml-4">
                     <h4 className="font-medium text-gray-900 dark:text-white">Make a transfer</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Transfer any amount to the account number using {user.virtualAccountBankName} as the destination bank
+                      Transfer any amount to the account number using {currentProvider.bankName} as the destination bank
                     </p>
                   </div>
                 </div>

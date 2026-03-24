@@ -14,6 +14,11 @@ export type User = {
   virtualAccountBankName?: string;
   virtualAccountNumber?: string;
   virtualAccountReference?: string;
+  opayAccountNumber?: string;
+  opayAccountName?: string;
+  palmpayAccountNumber?: string;
+  palmpayAccountName?: string;
+  paymentpointCustomerId?: string;
   bvn?: string;
   hasPin?: boolean;
 };
