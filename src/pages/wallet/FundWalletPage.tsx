@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Building2, RefreshCw, Copy, Check, Share2, CreditCard, Smartphone, Info, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Building2, RefreshCw, Copy, Check, Share2, CreditCard, Smartphone, Info, ChevronRight, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../lib/utils';
 import { supabase } from '../../lib/supabase';
@@ -158,12 +158,30 @@ const FundWalletPage: React.FC = () => {
                 {providers[selectedProvider].label} Account Number
               </p>
 
-              {isCreatingAccount && !hasAccount ? (
+              {isCreatingAccount && !hasAccount && selectedProvider !== 'flutterwave' ? (
                 <div className="flex items-center gap-2 my-3">
                   <span className="w-2 h-2 bg-[#0F9D58] rounded-full animate-bounce [animation-delay:-0.3s]" />
                   <span className="w-2 h-2 bg-[#0F9D58] rounded-full animate-bounce [animation-delay:-0.15s]" />
                   <span className="w-2 h-2 bg-[#0F9D58] rounded-full animate-bounce" />
                   <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">Setting up your account…</span>
+                </div>
+              ) : !hasAccount && selectedProvider === 'flutterwave' ? (
+                <div className="my-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 text-left">
+                  <div className="flex items-start">
+                    <AlertCircle className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" size={18} />
+                    <div className="ml-3">
+                      <h4 className="font-medium text-blue-900 dark:text-blue-100 text-sm">BVN Required</h4>
+                      <p className="mt-1 text-sm text-blue-800 dark:text-blue-200 mb-3">
+                        Creating a virtual account requires your BVN (Bank Verification Number). This is a requirement from our payment partner, Flutterwave, for KYC compliance.
+                      </p>
+                      <button
+                        onClick={() => navigate('/profile')}
+                        className="px-4 py-2 bg-[#0F9D58] text-white text-sm font-medium rounded-lg hover:bg-[#0d8a4f] transition-colors"
+                      >
+                        Update Profile to Create Virtual Account
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <p className="text-3xl font-bold text-gray-900 dark:text-white tracking-wide my-3">
