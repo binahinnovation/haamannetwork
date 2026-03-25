@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Phone, 
@@ -35,7 +35,7 @@ const DashboardPage: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<'flutterwave' | 'opay' | 'palmpay'>('palmpay');
-  const [hasAttemptedCreation, setHasAttemptedCreation] = useState<Record<string, boolean>>({});
+  const hasAttemptedCreationRef = useRef(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return document.documentElement.classList.contains('dark');
   });
@@ -251,17 +251,16 @@ const DashboardPage: React.FC = () => {
       // Auto-create only if BOTH are missing (stops loop if OPay is unavailable at provider level)
       const hasAnyPaymentPointAccount = user.palmpayAccountNumber || user.opayAccountNumber;
       
-      if (!hasAnyPaymentPointAccount && !hasAttemptedCreation['global']) {
+      // Use a ref instead of state to avoid triggering re-renders / infinite loop
+      if (!hasAnyPaymentPointAccount && !hasAttemptedCreationRef.current) {
         console.log("Auto-triggering virtual account generation on login...");
+        hasAttemptedCreationRef.current = true;
         setIsCreatingAccount(true);
-        setHasAttemptedCreation(prev => ({ ...prev, global: true }));
         
         try {
           await createPaymentPointAccounts(user.id);
-          // Wait longer for DB consistency
-          setTimeout(async () => {
-            await refreshUserData();
-          }, 3000);
+          // Immediately refresh to pull new account numbers into state
+          await refreshUserData();
         } catch (error) {
           console.error("Global account creation error:", error);
         } finally {
@@ -271,7 +270,8 @@ const DashboardPage: React.FC = () => {
     };
 
     triggerGlobalAccountCreation();
-  }, [user?.id, user?.opayAccountNumber, user?.palmpayAccountNumber, createPaymentPointAccounts, refreshUserData, hasAttemptedCreation]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.opayAccountNumber, user?.palmpayAccountNumber, createPaymentPointAccounts, refreshUserData]);
 
   const handleComingSoonNavigation = (serviceName: string, serviceDescription: string) => {
     navigate('/coming-soon', { 
