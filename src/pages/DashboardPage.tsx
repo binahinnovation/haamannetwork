@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Phone, 
@@ -28,14 +28,11 @@ import { formatCurrency } from '../lib/utils';
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, refreshUserData, createPaymentPointAccounts } = useAuthStore();
+  const { user, refreshUserData } = useAuthStore();
   const { config: serviceConfig, fetchConfig } = useServiceConfigStore();
   const { shop, fetchShop } = useVendorStore();
   const [showBalance, setShowBalance] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<'flutterwave' | 'opay' | 'palmpay'>('palmpay');
-  const hasAttemptedCreationRef = useRef(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return document.documentElement.classList.contains('dark');
   });
@@ -218,60 +215,6 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  // Virtual Account Providers
-  const virtualAccountProviders = {
-    palmpay: {
-      name: 'PalmPay',
-      bankName: user?.palmpayAccountName || 'PalmPay Limited',
-      accountNumber: user?.palmpayAccountNumber || '',
-      available: true,
-      isMissing: !user?.palmpayAccountNumber && !isCreatingAccount
-    },
-    opay: {
-      name: 'OPay',
-      bankName: user?.opayAccountName || 'OPay Digital Services Limited',
-      accountNumber: user?.opayAccountNumber || '',
-      available: true,
-      isMissing: !user?.opayAccountNumber && !isCreatingAccount
-    },
-    flutterwave: {
-      name: 'Flutterwave',
-      bankName: user?.virtualAccountBankName || 'WEMA BANK',
-      accountNumber: user?.virtualAccountNumber || '',
-      available: !!user?.virtualAccountNumber
-    }
-  };
-
-  const currentProvider = virtualAccountProviders[selectedProvider];
-
-  useEffect(() => {
-    const triggerGlobalAccountCreation = async () => {
-      if (!user?.id || isCreatingAccount) return;
-      
-      // Auto-create only if BOTH are missing (stops loop if OPay is unavailable at provider level)
-      const hasAnyPaymentPointAccount = user.palmpayAccountNumber || user.opayAccountNumber;
-      
-      // Use a ref instead of state to avoid triggering re-renders / infinite loop
-      if (!hasAnyPaymentPointAccount && !hasAttemptedCreationRef.current) {
-        console.log("Auto-triggering virtual account generation on login...");
-        hasAttemptedCreationRef.current = true;
-        setIsCreatingAccount(true);
-        
-        try {
-          await createPaymentPointAccounts(user.id);
-          // Immediately refresh to pull new account numbers into state
-          await refreshUserData();
-        } catch (error) {
-          console.error("Global account creation error:", error);
-        } finally {
-          setIsCreatingAccount(false);
-        }
-      }
-    };
-
-    triggerGlobalAccountCreation();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, user?.opayAccountNumber, user?.palmpayAccountNumber, createPaymentPointAccounts, refreshUserData]);
 
   const handleComingSoonNavigation = (serviceName: string, serviceDescription: string) => {
     navigate('/coming-soon', { 
@@ -482,96 +425,10 @@ const DashboardPage: React.FC = () => {
                 )}
               </div>
             </div>
-
-            {/* Virtual Account Details */}
-            {user?.id && (
-              <div className="pt-4 border-t border-white border-opacity-30">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs sm:text-sm opacity-90 font-medium">💳 Fund Wallet</p>
-                  
-                  {/* Provider Switcher */}
-                  <div className="flex items-center space-x-1 bg-white bg-opacity-20 rounded-lg p-1">
-                    {Object.entries(virtualAccountProviders).map(([key, provider]) => (
-                      <button
-                        key={key}
-                        onClick={() => setSelectedProvider(key as 'flutterwave' | 'opay' | 'palmpay')}
-                        disabled={!provider.available}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-                          selectedProvider === key
-                            ? 'bg-white text-green-600 shadow-sm'
-                            : provider.available
-                            ? 'text-white opacity-70 hover:opacity-100'
-                            : 'text-white opacity-40 cursor-not-allowed'
-                        }`}
-                        title={!provider.available ? 'Coming soon' : provider.name}
-                      >
-                        {provider.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="bg-white bg-opacity-15 backdrop-blur-sm rounded-xl p-4 space-y-3">
-                  {/* Bank Name */}
-                  <div>
-                    <p className="text-xs opacity-75 mb-1">Bank Name</p>
-                    <p className="text-lg sm:text-xl font-bold tracking-wide">
-                      {isCreatingAccount && !currentProvider.accountNumber ? 'Loading...' : currentProvider.bankName}
-                    </p>
-                  </div>
-                  
-                  {/* Account Number */}
-                  <div>
-                    <p className="text-xs opacity-75 mb-1">Account Number</p>
-                    <div className="flex items-center justify-between bg-white bg-opacity-20 rounded-lg p-3">
-                      <span className="text-xl sm:text-2xl font-bold font-mono tracking-wider">
-                        {isCreatingAccount && !currentProvider.accountNumber ? (
-                          <span className="flex items-center space-x-2">
-                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce"></span>
-                          </span>
-                        ) : currentProvider.accountNumber || 'Generating...'}
-                      </span>
-                      {currentProvider.accountNumber && (
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(currentProvider.accountNumber || '');
-                            const btn = document.activeElement as HTMLButtonElement;
-                            const originalText = btn.innerHTML;
-                            btn.innerHTML = '✓';
-                            setTimeout(() => {
-                              btn.innerHTML = originalText;
-                            }, 1000);
-                          }}
-                          className="ml-3 p-2 bg-white bg-opacity-30 hover:bg-opacity-40 rounded-lg transition-all active:scale-95"
-                          title="Copy account number"
-                        >
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Info Text */}
-                  <div className="flex items-start space-x-2 bg-white bg-opacity-10 rounded-lg p-2.5">
-                    <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                    <p className="text-xs opacity-90 leading-relaxed">
-                      {isCreatingAccount && !currentProvider.accountNumber 
-                        ? "Setting up your virtual account. Please wait a moment..."
-                        : "Transfer any amount to this account and your wallet will be credited automatically"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </Card>
       </div>
+
 
       {/* Services Grid */}
       <div className="px-3 sm:px-4 py-4 sm:py-6">

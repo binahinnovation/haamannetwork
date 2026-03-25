@@ -1,525 +1,280 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertCircle, Copy, RefreshCw, CreditCard, Wallet, Ban as Bank, CheckCircle, Info } from 'lucide-react';
-import Card from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
+import { ArrowLeft, Building2, RefreshCw, Copy, Check, Share2, CreditCard, Smartphone, Info, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
-import { useAppSettingsStore } from '../../store/appSettingsStore';
 import { formatCurrency } from '../../lib/utils';
 import { supabase } from '../../lib/supabase';
 
 const FundWalletPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, refreshUserData, createPaymentPointAccounts } = useAuthStore();
-  const { siteName, footerEmail } = useAppSettingsStore();
+  const [selectedProvider, setSelectedProvider] = useState<'palmpay' | 'opay' | 'flutterwave'>('palmpay');
+  const [expandedSection, setExpandedSection] = useState<'bank' | null>('bank');
   const [copied, setCopied] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<'flutterwave' | 'opay' | 'palmpay'>('flutterwave');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
-  const [hasAttemptedCreation, setHasAttemptedCreation] = useState<Record<string, boolean>>({});
-  const [fundingCharges, setFundingCharges] = useState({
-    enabled: false,
-    type: 'percentage',
-    value: 0,
-    minDeposit: 0,
-    maxDeposit: 0,
-    displayText: ''
-  });
-  const [amount, setAmount] = useState('');
-  const [calculatedCharge, setCalculatedCharge] = useState(0);
-  const [amountToReceive, setAmountToReceive] = useState(0);
-  const [loadingCharges, setLoadingCharges] = useState(false);
+  const hasAttemptedCreationRef = useRef(false);
+  const [fundingCharges, setFundingCharges] = useState({ enabled: false, type: 'percentage', value: 0, displayText: '' });
 
   useEffect(() => {
-    if (user && !user.virtualAccountNumber) {
-      refreshUserData();
-    }
     fetchFundingCharges();
-  }, [user, refreshUserData]);
+  }, []);
 
-  const virtualAccountProviders = {
-    palmpay: {
-      name: 'PalmPay',
-      bankName: user?.palmpayAccountName || 'PalmPay Limited',
-      accountNumber: user?.palmpayAccountNumber || '',
-      accountName: user?.palmpayAccountName || user?.name || '',
-      available: true,
-      isMissing: !user?.palmpayAccountNumber && !isCreatingAccount
-    },
-    opay: {
-      name: 'OPay',
-      bankName: user?.opayAccountName || 'OPay Digital Services Limited',
-      accountNumber: user?.opayAccountNumber || '',
-      accountName: user?.opayAccountName || user?.name || '',
-      available: true,
-      isMissing: !user?.opayAccountNumber && !isCreatingAccount
-    },
-    flutterwave: {
-      name: 'Flutterwave',
-      bankName: user?.virtualAccountBankName || 'WEMA BANK',
-      accountNumber: user?.virtualAccountNumber || 'Generating...',
-      accountName: `ArabNetwork - ${user?.name || ''}`,
-      available: !!user?.virtualAccountNumber
-    }
-  };
-
-  const currentProvider = virtualAccountProviders[selectedProvider];
-
+  // Auto-create accounts if missing (same pattern as DashboardPage)
   useEffect(() => {
-    const triggerGlobalAccountCreation = async () => {
+    const trigger = async () => {
       if (!user?.id || isCreatingAccount) return;
-      
-      // Auto-create only if BOTH are missing (stops loop if OPay is unavailable at provider level)
-      const hasAnyPaymentPointAccount = user.palmpayAccountNumber || user.opayAccountNumber;
-      
-      if (!hasAnyPaymentPointAccount && !hasAttemptedCreation['global']) {
-        console.log("Auto-triggering virtual account generation in FundWallet...");
+      const hasAny = user.palmpayAccountNumber || user.opayAccountNumber;
+      if (!hasAny && !hasAttemptedCreationRef.current) {
+        hasAttemptedCreationRef.current = true;
         setIsCreatingAccount(true);
-        setHasAttemptedCreation(prev => ({ ...prev, global: true }));
-        
         try {
           await createPaymentPointAccounts(user.id);
-          setTimeout(async () => {
-            await refreshUserData();
-          }, 3000);
-        } catch (error) {
-          console.error("Global account creation error (FundWallet):", error);
+          await refreshUserData();
+        } catch (e) {
+          console.error('Account creation error:', e);
         } finally {
           setIsCreatingAccount(false);
         }
       }
     };
-
-    triggerGlobalAccountCreation();
-  }, [user?.id, user?.opayAccountNumber, user?.palmpayAccountNumber, createPaymentPointAccounts, refreshUserData, hasAttemptedCreation]);
+    trigger();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.palmpayAccountNumber, user?.opayAccountNumber]);
 
   const fetchFundingCharges = async () => {
-    setLoadingCharges(true);
     try {
-      const { data, error } = await supabase
-        .from('admin_settings')
-        .select('key, value')
-        .in('key', [
-          'funding_charge_enabled',
-          'funding_charge_type',
-          'funding_charge_value',
-          'funding_charge_min_deposit',
-          'funding_charge_max_deposit',
-          'funding_charge_display_text'
-        ]);
-
-      if (error) throw error;
-
-      const settings: Record<string, string> = {};
-      data?.forEach(setting => {
-        settings[setting.key] = setting.value;
-      });
-
+      const { data } = await supabase.from('admin_settings').select('key, value')
+        .in('key', ['funding_charge_enabled', 'funding_charge_type', 'funding_charge_value', 'funding_charge_display_text']);
+      const s: Record<string, string> = {};
+      data?.forEach(d => { s[d.key] = d.value; });
       setFundingCharges({
-        enabled: settings.funding_charge_enabled === 'true',
-        type: settings.funding_charge_type || 'percentage',
-        value: parseFloat(settings.funding_charge_value || '0'),
-        minDeposit: parseFloat(settings.funding_charge_min_deposit || '0'),
-        maxDeposit: parseFloat(settings.funding_charge_max_deposit || '0'),
-        displayText: settings.funding_charge_display_text || ''
+        enabled: s.funding_charge_enabled === 'true',
+        type: s.funding_charge_type || 'percentage',
+        value: parseFloat(s.funding_charge_value || '0'),
+        displayText: s.funding_charge_display_text || '',
       });
-    } catch (error) {
-      console.error('Error fetching funding charges:', error);
-    } finally {
-      setLoadingCharges(false);
-    }
+    } catch (e) { /* silent */ }
   };
 
   const handleRefresh = async () => {
-    setRefreshing(true);
+    setIsRefreshing(true);
     await refreshUserData();
-    setTimeout(() => setRefreshing(false), 1000);
+    setIsRefreshing(false);
   };
 
-  const copyAccountNumber = () => {
-    const num = currentProvider.accountNumber;
-    if (num) {
-      navigator.clipboard.writeText(num);
+  const providers = {
+    palmpay:     { label: 'PalmPay',     accountNumber: user?.palmpayAccountNumber || '', accountName: user?.name || '' },
+    opay:        { label: 'OPay',        accountNumber: user?.opayAccountNumber || '',    accountName: user?.name || '' },
+    flutterwave: { label: 'Flutterwave', accountNumber: user?.virtualAccountNumber || '', accountName: user?.name || '' },
+  };
+
+  const current = providers[selectedProvider];
+  const hasAccount = !!current.accountNumber;
+
+  const copyNumber = () => {
+    if (!current.accountNumber) return;
+    navigator.clipboard.writeText(current.accountNumber);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
+  };
+
+  const shareDetails = () => {
+    const text = `${providers[selectedProvider].label} Account\nAccount Number: ${current.accountNumber}\nAccount Name: ${current.accountName}`;
+    if (navigator.share) {
+      navigator.share({ title: 'My Virtual Account', text });
+    } else {
+      navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
     }
   };
 
-  const calculateCharge = (inputAmount: string) => {
-    const depositAmount = parseFloat(inputAmount);
-    
-    if (isNaN(depositAmount) || depositAmount <= 0) {
-      setCalculatedCharge(0);
-      setAmountToReceive(0);
-      return;
-    }
-
-    // If charges are not enabled or amount is outside min/max range, no charge applies
-    if (!fundingCharges.enabled || 
-        (fundingCharges.minDeposit > 0 && depositAmount < fundingCharges.minDeposit) ||
-        (fundingCharges.maxDeposit > 0 && depositAmount > fundingCharges.maxDeposit)) {
-      setCalculatedCharge(0);
-      setAmountToReceive(depositAmount);
-      return;
-    }
-
-    let charge = 0;
-    if (fundingCharges.type === 'percentage') {
-      charge = depositAmount * (fundingCharges.value / 100);
-    } else { // fixed
-      charge = fundingCharges.value;
-    }
-
-    setCalculatedCharge(charge);
-    setAmountToReceive(depositAmount - charge);
-  };
-
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setAmount(value);
-    calculateCharge(value);
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 px-4 py-4 flex items-center border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 px-4 py-4 flex items-center sticky top-0 z-10">
         <button
-          onClick={() => navigate('/')}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+          onClick={() => navigate(-1)}
+          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors mr-3"
         >
-          <ArrowLeft size={24} className="text-gray-700 dark:text-gray-300" />
+          <ArrowLeft size={22} className="text-gray-800 dark:text-gray-200" />
         </button>
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-white ml-4">Fund Wallet</h1>
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-white flex-1">Add Money</h1>
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+          title="Refresh"
+        >
+          <RefreshCw size={18} className={`text-gray-500 dark:text-gray-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
-      <div className="p-4 space-y-8">
-        {user?.id ? (
-          <>
-            {/* Virtual Account Details */}
-            <Card className="p-6 bg-gradient-to-br from-[#0F9D58]/10 to-[#0d8a4f]/5">
-              <div className="flex justify-between items-start mb-6">
-                <div className="flex-1">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Fund Your Wallet</h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Select a provider and transfer to the provided account
-                  </p>
-                </div>
-                <div className="flex flex-col items-end space-y-2">
-                  <div className="flex items-center space-x-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
-                    {Object.entries(virtualAccountProviders).map(([key, provider]) => (
-                      <button
-                        key={key}
-                        onClick={() => setSelectedProvider(key as 'flutterwave' | 'opay' | 'palmpay')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-                          selectedProvider === key
-                            ? 'bg-white dark:bg-gray-600 text-green-600 dark:text-green-400 shadow-sm'
-                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                        }`}
-                      >
-                        {provider.name}
-                      </button>
-                    ))}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleRefresh}
-                    isLoading={refreshing}
-                    className="text-gray-500 h-8"
-                    icon={<RefreshCw size={14} />}
+      <div className="p-4 space-y-3 pb-10">
+
+        {/* Bank Transfer Card */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm">
+          {/* Row header */}
+          <button
+            className="w-full flex items-center p-4 text-left"
+            onClick={() => setExpandedSection(expandedSection === 'bank' ? null : 'bank')}
+          >
+            <div className="w-11 h-11 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center mr-3 flex-shrink-0">
+              <Building2 size={22} className="text-[#0F9D58]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-900 dark:text-white text-sm">Bank Transfer</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Add money via mobile or internet banking</p>
+            </div>
+            <ChevronRight
+              size={18}
+              className={`text-gray-400 flex-shrink-0 transition-transform duration-200 ${expandedSection === 'bank' ? 'rotate-90' : ''}`}
+            />
+          </button>
+
+          {/* Expanded content */}
+          {expandedSection === 'bank' && (
+            <div className="px-4 pb-5 border-t border-gray-100 dark:border-gray-700">
+              {/* Provider selector */}
+              <div className="flex gap-2 mt-4 mb-5">
+                {(Object.keys(providers) as Array<keyof typeof providers>).map(key => (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedProvider(key)}
+                    className={`flex-1 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                      selectedProvider === key
+                        ? 'bg-[#0F9D58] text-white border-[#0F9D58]'
+                        : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-[#0F9D58]'
+                    }`}
                   >
-                    Refresh
-                  </Button>
-                </div>
+                    {providers[key].label}
+                  </button>
+                ))}
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 mb-4">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center">
-                    <Bank className="text-[#0F9D58] mr-3" size={24} />
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Bank Name</p>
-                      <p className="font-semibold text-gray-900 dark:text-white">{currentProvider.bankName}</p>
-                    </div>
-                  </div>
-                  <div className="w-12 h-12 bg-[#0F9D58] rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">H</span>
-                  </div>
-                </div>
+              {/* Account number display */}
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                {providers[selectedProvider].label} Account Number
+              </p>
 
-                <div className="mb-4">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Account Number</p>
-                  <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
-                    <p className="font-bold text-xl text-gray-900 dark:text-white tracking-wider">
-                      {isCreatingAccount && !currentProvider.accountNumber ? (
-                        <span className="flex items-center space-x-2">
-                          <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                          <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                          <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce"></span>
-                        </span>
-                      ) : (
-                        currentProvider.accountNumber || 'Generating...'
-                      )}
-                    </p>
-                    {currentProvider.accountNumber && (
-                      <button
-                        onClick={copyAccountNumber}
-                        className={`p-2 rounded-lg transition-colors ${
-                          copied 
-                            ? 'bg-green-500 text-white' 
-                            : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500'
-                        }`}
-                      >
-                        {copied ? <CheckCircle size={18} /> : <Copy size={18} />}
-                      </button>
-                    )}
-                  </div>
+              {isCreatingAccount && !hasAccount ? (
+                <div className="flex items-center gap-2 my-3">
+                  <span className="w-2 h-2 bg-[#0F9D58] rounded-full animate-bounce [animation-delay:-0.3s]" />
+                  <span className="w-2 h-2 bg-[#0F9D58] rounded-full animate-bounce [animation-delay:-0.15s]" />
+                  <span className="w-2 h-2 bg-[#0F9D58] rounded-full animate-bounce" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">Setting up your account…</span>
                 </div>
+              ) : (
+                <p className="text-3xl font-bold text-gray-900 dark:text-white tracking-wide my-3">
+                  {hasAccount
+                    ? current.accountNumber.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3')
+                    : '—'}
+                </p>
+              )}
 
-                <div className="mb-4">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Account Name</p>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {isCreatingAccount && !currentProvider.accountNumber ? 'Loading...' : currentProvider.accountName}
-                  </p>
-                  {/* Debug info - remove in production */}
-                  {import.meta.env.DEV && (
-                    <p className="text-xs text-gray-400 mt-1">
-                      Debug: siteName = "{siteName}" | Forced: ArabNetwork
-                    </p>
-                  )}
-                </div>
+              {hasAccount && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">
+                  Account name: <span className="font-medium text-gray-700 dark:text-gray-300">{current.accountName}</span>
+                </p>
+              )}
 
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Balance</p>
-                  <p className="font-bold text-xl text-[#0F9D58]">
-                    {formatCurrency(user?.walletBalance || 0)}
-                  </p>
-                </div>
+              {/* Action buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={copyNumber}
+                  disabled={!hasAccount}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm transition-all ${
+                    hasAccount
+                      ? 'bg-[#0F9D58]/10 text-[#0F9D58] hover:bg-[#0F9D58]/20 active:scale-95'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  {copied ? <Check size={16} /> : <Copy size={16} />}
+                  {copied ? 'Copied!' : 'Copy Number'}
+                </button>
+                <button
+                  onClick={shareDetails}
+                  disabled={!hasAccount}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm transition-all ${
+                    hasAccount
+                      ? 'bg-[#0F9D58] text-white hover:bg-[#0d8a4f] active:scale-95'
+                      : 'bg-gray-200 dark:bg-gray-600 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  <Share2 size={16} />
+                  Share Details
+                </button>
               </div>
 
-              {/* Funding Charges Info */}
-              {loadingCharges ? (
-                <div className="flex justify-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#0F9D58]"></div>
-                </div>
-              ) : fundingCharges.enabled && (
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 mb-4">
-                  <div className="flex items-start mb-4">
-                    <Info className="text-[#0F9D58] mr-3 flex-shrink-0 mt-1" size={20} />
-                    <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Funding Charges</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {fundingCharges.displayText || 
-                          `A ${fundingCharges.type === 'percentage' ? 
-                            fundingCharges.value + '% charge' : 
-                            formatCurrency(fundingCharges.value) + ' fee'} 
-                          applies to wallet funding.`}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Deposit Amount Input */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Enter Deposit Amount
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₦</span>
-                      <input
-                        type="number"
-                        value={amount}
-                        onChange={handleAmountChange}
-                        placeholder="0.00"
-                        className="w-full pl-8 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0F9D58]"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Charge Calculation */}
-                  {amount && parseFloat(amount) > 0 && (
-                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Amount to Deposit:</span>
-                        <span className="font-medium text-gray-900 dark:text-white">{formatCurrency(parseFloat(amount))}</span>
-                      </div>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Service Charge:</span>
-                        <span className="font-medium text-red-500">{formatCurrency(calculatedCharge)}</span>
-                      </div>
-                      <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-600">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">You'll Receive:</span>
-                        <span className="font-bold text-[#0F9D58]">{formatCurrency(amountToReceive)}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Min/Max Info */}
-                  {(fundingCharges.minDeposit > 0 || fundingCharges.maxDeposit > 0) && (
-                    <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                      {fundingCharges.minDeposit > 0 && (
-                        <p>Minimum deposit for charges: {formatCurrency(fundingCharges.minDeposit)}</p>
-                      )}
-                      {fundingCharges.maxDeposit > 0 && (
-                        <p>Maximum deposit for charges: {formatCurrency(fundingCharges.maxDeposit)}</p>
-                      )}
-                    </div>
-                  )}
+              {/* Charge info */}
+              {fundingCharges.enabled && (
+                <div className="mt-4 flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3">
+                  <Info size={14} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    {fundingCharges.displayText ||
+                      `A ${fundingCharges.type === 'percentage' ? fundingCharges.value + '%' : '₦' + fundingCharges.value} service charge applies to wallet funding.`}
+                  </p>
                 </div>
               )}
 
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                <div className="flex items-start">
-                  <AlertCircle className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" size={18} />
-                  <div className="ml-3">
-                    <h4 className="font-medium text-blue-900 dark:text-blue-100 text-sm">Important Information</h4>
-                    <ul className="mt-1 text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                      <li>• Transfers to this account are processed instantly</li>
-                      <li>• Minimum deposit amount: ₦100</li>
-                      {fundingCharges.enabled && (
-                        <li>• Service charges apply as shown above</li>
-                      )}
-                      <li>• For issues with transfers, contact support</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* How to Fund */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">How to Fund Your Wallet</h3>
-              
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <div className="w-8 h-8 bg-[#0F9D58] text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                    1
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="font-medium text-gray-900 dark:text-white">Copy your account number</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Click the copy button next to your account number above
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start">
-                  <div className="w-8 h-8 bg-[#0F9D58] text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                    2
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="font-medium text-gray-900 dark:text-white">Open your banking app</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Log in to your mobile banking app or internet banking
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start">
-                  <div className="w-8 h-8 bg-[#0F9D58] text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                    3
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="font-medium text-gray-900 dark:text-white">Make a transfer</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Transfer any amount to the account number using {currentProvider.bankName} as the destination bank
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start">
-                  <div className="w-8 h-8 bg-[#0F9D58] text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                    4
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="font-medium text-gray-900 dark:text-white">Your wallet is funded instantly</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Your wallet balance will be updated automatically once the transfer is complete
-                      {fundingCharges.enabled && ' (service charges may apply)'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Transaction History Link */}
-            <div className="flex justify-center">
-              <Button
-                variant="outline"
-                onClick={() => navigate('/transactions')}
-                icon={<CreditCard size={16} />}
-              >
-                View Transaction History
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            {/* No Virtual Account Yet */}
-            <Card className="p-6 text-center">
-              <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Wallet className="text-yellow-600 dark:text-yellow-400" size={28} />
-              </div>
-              
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Virtual Account Setup</h2>
-              
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                You don't have a virtual account set up yet. To fund your wallet via bank transfer, you'll need to create a virtual account.
+              {/* Auto-credit note */}
+              <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-4">
+                Transfer any amount to this account and your wallet will be credited automatically
               </p>
-              
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6 text-left">
-                <div className="flex items-start">
-                  <AlertCircle className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" size={18} />
-                  <div className="ml-3">
-                    <h4 className="font-medium text-blue-900 dark:text-blue-100 text-sm">Important Information</h4>
-                    <p className="mt-1 text-sm text-blue-800 dark:text-blue-200">
-                      Creating a virtual account requires your BVN (Bank Verification Number). This is a requirement from our payment partner, Flutterwave, for KYC compliance.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              <Button
-                onClick={() => navigate('/profile')}
-                className="bg-[#0F9D58] hover:bg-[#0d8a4f] text-white"
-              >
-                Update Profile to Create Virtual Account
-              </Button>
-            </Card>
-
-            {/* Alternative Methods */}
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Alternative Funding Methods
-              </h3>
-              
-              <div className="space-y-4">
-                <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-2">Contact Support</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Please contact our support team to arrange a manual wallet funding.
-                  </p>
-                  <p className="text-sm font-medium text-[#0F9D58] mt-2">
-                    {footerEmail}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </>
-        )}
-
-        {/* Support Contact */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
-          <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-            Need Help?
-          </h3>
-          <p className="text-sm text-blue-800 dark:text-blue-200">
-            If you have any questions about funding your wallet, please contact our support team.
-          </p>
-          <p className="text-sm text-[#0F9D58] font-medium mt-1">
-            {footerEmail}
-          </p>
+            </div>
+          )}
         </div>
+
+        {/* OR divider */}
+        <div className="flex items-center gap-3 px-2">
+          <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700" />
+          <span className="text-xs font-medium text-gray-400 dark:text-gray-500">OR</span>
+          <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700" />
+        </div>
+
+        {/* Transaction History */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm">
+          <button
+            className="w-full flex items-center p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+            onClick={() => navigate('/transactions')}
+          >
+            <div className="w-11 h-11 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center mr-3 flex-shrink-0">
+              <CreditCard size={22} className="text-blue-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-900 dark:text-white text-sm">Transaction History</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">View all your past deposits and spending</p>
+            </div>
+            <ChevronRight size={18} className="text-gray-400 flex-shrink-0" />
+          </button>
+        </div>
+
+        {/* Contact Support */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm">
+          <button
+            className="w-full flex items-center p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+            onClick={() => navigate('/support')}
+          >
+            <div className="w-11 h-11 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center mr-3 flex-shrink-0">
+              <Smartphone size={22} className="text-purple-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-900 dark:text-white text-sm">Contact Support</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Get help with your wallet or transactions</p>
+            </div>
+            <ChevronRight size={18} className="text-gray-400 flex-shrink-0" />
+          </button>
+        </div>
+
+        {/* Current Balance pill */}
+        <div className="flex justify-center pt-2">
+          <div className="bg-white dark:bg-gray-800 shadow-sm rounded-full px-6 py-2.5 flex items-center gap-2">
+            <span className="text-xs text-gray-500 dark:text-gray-400">Current Balance:</span>
+            <span className="text-sm font-bold text-[#0F9D58]">{formatCurrency(user?.walletBalance || 0)}</span>
+          </div>
+        </div>
+
       </div>
     </div>
   );
