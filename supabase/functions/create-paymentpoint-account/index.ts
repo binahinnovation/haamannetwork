@@ -37,11 +37,33 @@ serve(async (req) => {
 
     if (userError || !user) throw new Error("User not found");
 
+    // Normalize phone to 11-digit Nigerian local format (e.g. 08012345678)
+    const normalizePhone = (raw: string): string => {
+      // Strip all non-numeric characters
+      let digits = (raw || "").replace(/\D/g, "");
+      // Remove country code prefix: 234XXXXXXXXXX → 0XXXXXXXXXX
+      if (digits.startsWith("234") && digits.length === 13) {
+        digits = "0" + digits.slice(3);
+      }
+      // If 10 digits with no leading 0, prepend 0
+      if (digits.length === 10 && !digits.startsWith("0")) {
+        digits = "0" + digits;
+      }
+      return digits;
+    };
+
+    const normalizedPhone = normalizePhone(user.phone);
+    console.log(`Phone normalization: raw="${user.phone}" → normalized="${normalizedPhone}"`);
+
+    if (normalizedPhone.length !== 11) {
+      console.warn(`Phone number could not be normalized to 11 digits: "${normalizedPhone}". Proceeding anyway.`);
+    }
+
     // Prepare PaymentPoint API request
     const payload = {
       email: user.email,
       name: user.name,
-      phoneNumber: user.phone || "",
+      phoneNumber: normalizedPhone || user.phone || "",
       bankCode: ["20946", "20897"], // OPay and PalmPay
       businessId: paymentPointBusinessId,
     };
