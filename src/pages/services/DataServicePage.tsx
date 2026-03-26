@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Zap, ArrowLeft, CheckCircle, XCircle, User, Search, Filter, Star, Download, Info, Plus } from 'lucide-react';
+import { Zap, ArrowLeft, CheckCircle, XCircle, User, Search, Star, Download, Info, Plus } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -100,7 +100,6 @@ const DataServicePage: React.FC = () => {
   const [categories, setCategories] = useState<DataPlanCategory[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
   
   // Beneficiaries state
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
@@ -222,9 +221,11 @@ const DataServicePage: React.FC = () => {
     return matchesNetwork && matchesCategory && matchesSearch;
   });
 
-  const availableCategories = categories.filter(cat => 
-    !selectedNetwork || cat.network === selectedNetwork
-  );
+  const availableCategories = categories.filter(cat => {
+    if (selectedNetwork && cat.network !== selectedNetwork) return false;
+    // Only show category if there are actual plans for this network + plan_type combo
+    return dataPlans.some(plan => plan.network === cat.network && plan.plan_type === cat.plan_type);
+  });
 
   const popularPlans = filteredPlans.filter(plan => plan.is_popular).slice(0, 3);
   
@@ -432,7 +433,7 @@ const DataServicePage: React.FC = () => {
   };
 
   const renderComingSoon = () => (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden w-full max-w-full">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 px-4 py-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
@@ -486,7 +487,7 @@ const DataServicePage: React.FC = () => {
   );
 
   const renderStepOne = () => (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden w-full max-w-full">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 px-4 py-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
@@ -498,7 +499,8 @@ const DataServicePage: React.FC = () => {
         <h1 className="text-xl font-semibold text-gray-900 dark:text-white ml-4">Data Bundle</h1>
       </div>
 
-      <div className="p-4 space-y-6">
+      <div className="py-4">
+        <div className="max-w-md mx-auto space-y-6 px-4">
         {/* Service Type Toggle */}
         <div className="flex bg-gray-200 dark:bg-gray-700 rounded-xl p-1">
           <button
@@ -625,7 +627,7 @@ const DataServicePage: React.FC = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Select Network Provider
           </h2>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-4 gap-3 sm:gap-4">
             {networkProviders.map((provider) => (
               <button
                 key={provider.value}
@@ -634,20 +636,21 @@ const DataServicePage: React.FC = () => {
                   setSelectedCategory(''); // Reset category when network changes
                   setSelectedPlan(null); // Reset plan when network changes
                 }}
-                className={`flex flex-col items-center p-4 rounded-2xl border-2 transition-all ${
+                className={`flex flex-col items-center p-3 sm:p-4 rounded-2xl border-2 transition-all ${
                   selectedNetwork === provider.value
                     ? 'border-[#0F9D58] bg-[#0F9D58]/5'
                     : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
                 }`}
               >
-                <div className="w-12 h-12 rounded-full flex items-center justify-center mb-2 overflow-hidden bg-white">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center mb-2 overflow-hidden bg-white flex-shrink-0">
                   <img
                     src={provider.imageUrl}
                     alt={provider.label}
-                    className="w-full h-full object-contain"
+                    className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
+                    loading="lazy"
                   />
                 </div>
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate w-full text-center">
                   {provider.label}
                 </span>
               </button>
@@ -655,59 +658,53 @@ const DataServicePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Search and Filters */}
-        {selectedNetwork && (
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                <input
-                  type="text"
-                  placeholder="Search data plans..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0F9D58] focus:border-transparent"
-                />
-              </div>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="p-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                <Filter size={16} className="text-gray-500" />
-              </button>
-            </div>
-
-            {/* Category Filter */}
-            {showFilters && availableCategories.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Plan Type</h3>
-                <div className="flex flex-wrap gap-2">
+        {/* Plan Type Categories - Horizontal Scroll */}
+        {selectedNetwork && availableCategories.length > 0 && (
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Plan Type</h3>
+            <div className="w-full max-w-full overflow-hidden">
+              <div className="overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
+              <div className="flex space-x-2 min-w-max">
+                <button
+                  onClick={() => setSelectedCategory('')}
+                  className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
+                    !selectedCategory
+                      ? 'bg-[#0F9D58] text-white shadow-md'
+                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-[#0F9D58]'
+                  }`}
+                >
+                  All Plans
+                </button>
+                {availableCategories.map((category) => (
                   <button
-                    onClick={() => setSelectedCategory('')}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                      !selectedCategory
-                        ? 'bg-[#0F9D58] text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category.plan_type)}
+                    className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
+                      selectedCategory === category.plan_type
+                        ? 'bg-[#0F9D58] text-white shadow-md'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-[#0F9D58]'
                     }`}
                   >
-                    All Plans
+                    {category.display_name}
                   </button>
-                  {availableCategories.map((category) => (
-                    <button
-                      key={category.id}
-                      onClick={() => setSelectedCategory(category.plan_type)}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                        selectedCategory === category.plan_type
-                          ? 'bg-[#0F9D58] text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {category.display_name}
-                    </button>
-                  ))}
-                </div>
+                ))}
               </div>
-            )}
+            </div>
+          </div>
+        </div>
+      )}
+
+        {/* Search Bar */}
+        {selectedNetwork && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              placeholder="Search data plans..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0F9D58] focus:border-transparent"
+            />
           </div>
         )}
 
@@ -720,7 +717,7 @@ const DataServicePage: React.FC = () => {
                 <button
                   key={plan.id}
                   onClick={() => setSelectedPlan(plan)}
-                  className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
+                  className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all min-w-0 max-w-full overflow-hidden ${
                     selectedPlan?.id === plan.id
                       ? 'border-[#0F9D58] bg-[#0F9D58]/5'
                       : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
@@ -730,12 +727,12 @@ const DataServicePage: React.FC = () => {
                     <div className="w-10 h-10 rounded-full bg-[#0F9D58]/10 flex items-center justify-center mr-3">
                       <Zap size={16} className="text-[#0F9D58]" />
                     </div>
-                    <div className="text-left">
-                      <p className="font-medium text-gray-900 dark:text-white">{plan.size}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{plan.validity}</p>
+                    <div className="text-left min-w-0">
+                      <p className="font-medium text-gray-900 dark:text-white truncate">{plan.size}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{plan.validity}</p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex-shrink-0">
                     <div className="flex flex-col items-end">
                       {plan.show_discount_badge && plan.discount_percentage > 0 && (
                         <span className="inline-flex px-2 py-1 text-xs font-bold rounded-full bg-red-500 text-white mb-1">
@@ -757,7 +754,7 @@ const DataServicePage: React.FC = () => {
 
         {/* All Data Plans */}
         {selectedNetwork && (
-          <div>
+          <div className="w-full overflow-hidden">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
               {selectedCategory ? 
                 categories.find(c => c.plan_type === selectedCategory)?.display_name || 'Data Plans' : 
@@ -769,12 +766,12 @@ const DataServicePage: React.FC = () => {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0F9D58]"></div>
               </div>
             ) : filteredPlans.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-96 overflow-y-auto pr-1">
+              <div className="w-full max-w-full grid grid-cols-2 gap-3 max-h-96 overflow-y-auto overflow-x-hidden pr-1">
                 {filteredPlans.map((plan) => (
                   <button
                     key={plan.id}
                     onClick={() => setSelectedPlan(plan)}
-                    className={`relative p-3 rounded-xl border-2 transition-all text-center ${
+                    className={`relative p-3 rounded-xl border-2 transition-all text-center h-[140px] w-full min-w-0 max-w-full flex flex-col justify-center overflow-hidden ${
                       selectedPlan?.id === plan.id
                         ? 'border-[#0F9D58] bg-[#0F9D58]/5'
                         : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-[#0F9D58]/30'
@@ -782,27 +779,27 @@ const DataServicePage: React.FC = () => {
                   >
                     {/* Badges */}
                     {plan.is_popular && (
-                      <div className="absolute -top-1 -left-1 bg-yellow-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full flex items-center">
+                      <div className="absolute -top-1 -left-1 bg-yellow-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full flex items-center z-10">
                         <Star size={8} className="mr-0.5 fill-current" />
                         HOT
                       </div>
                     )}
                     {plan.show_discount_badge && plan.discount_percentage > 0 && (
-                      <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                      <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full z-10">
                         -{plan.discount_percentage}%
                       </div>
                     )}
                     
                     {/* Plan Content */}
-                    <div className="space-y-1">
-                      <h4 className="text-base md:text-lg font-bold text-gray-900 dark:text-white">{plan.size}</h4>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{plan.plan_type}</p>
-                      <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">{plan.validity}</p>
-                      <p className="text-lg md:text-xl font-bold text-[#0F9D58]">{formatCurrency(plan.selling_price)}</p>
+                    <div className="space-y-1 w-full px-1 min-w-0 max-w-full overflow-hidden">
+                      <h4 className="text-base font-bold text-gray-900 dark:text-white truncate">{plan.size}</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 capitalize truncate">{plan.plan_type}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{plan.validity}</p>
+                      <p className="text-lg font-bold text-[#0F9D58] truncate">{formatCurrency(plan.selling_price)}</p>
                       
                       {/* Show cashback info if available in description */}
                       {plan.description.toLowerCase().includes('cashback') && (
-                        <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                        <p className="text-xs text-green-600 dark:text-green-400 font-medium truncate">
                           {plan.description.match(/\w+\d+\s*Cashback/i)?.[0] || ''}
                         </p>
                       )}
@@ -869,7 +866,7 @@ const DataServicePage: React.FC = () => {
             <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Selected Plan</h3>
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{selectedPlan.description}</p>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{selectedPlan.description}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{selectedPlan.size} for {selectedPlan.validity}</p>
               </div>
               <div className="flex flex-col items-end">
@@ -919,6 +916,7 @@ const DataServicePage: React.FC = () => {
             </div>
           )}
         </div>
+      </div>
 
         {/* Continue Button */}
         <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
@@ -935,7 +933,7 @@ const DataServicePage: React.FC = () => {
   );
 
   const renderStepTwo = () => (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 px-4 py-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
@@ -959,16 +957,16 @@ const DataServicePage: React.FC = () => {
               </span>
             </div>
             
-            <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-700">
-              <span className="text-gray-600 dark:text-gray-400">Data Plan</span>
-              <span className="font-medium text-gray-900 dark:text-white">
+            <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-700 min-w-0">
+              <span className="text-gray-600 dark:text-gray-400 flex-shrink-0 mr-2">Data Plan</span>
+              <span className="font-medium text-gray-900 dark:text-white truncate text-right">
                 {selectedPlan?.description}
               </span>
             </div>
             
-            <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-700">
-              <span className="text-gray-600 dark:text-gray-400">Data Size</span>
-              <span className="font-medium text-gray-900 dark:text-white">
+            <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-700 min-w-0">
+              <span className="text-gray-600 dark:text-gray-400 flex-shrink-0 mr-2">Data Size</span>
+              <span className="font-medium text-gray-900 dark:text-white truncate text-right">
                 {selectedPlan?.size} ({selectedPlan?.validity})
               </span>
             </div>
@@ -985,7 +983,7 @@ const DataServicePage: React.FC = () => {
               </div>
             )}
             
-            <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex justify-between py-3 border-b border-gray-200 dark:border-gray-700 min-w-0">
               <span className="text-gray-600 dark:text-gray-400">Amount</span>
               <div className="flex flex-col items-end">
                 {selectedPlan?.show_discount_badge && selectedPlan?.discount_percentage > 0 && (
@@ -1029,7 +1027,7 @@ const DataServicePage: React.FC = () => {
   );
 
   const renderStepThree = () => (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4 overflow-x-hidden">
       <Card className="w-full max-w-md p-6 text-center">
         {isSuccess ? (
           <>
@@ -1053,14 +1051,14 @@ const DataServicePage: React.FC = () => {
                 <span className="font-medium text-gray-900 dark:text-white">{phoneNumber}</span>
               </div>
               
-              <div className="flex justify-between py-2">
-                <span className="text-gray-600 dark:text-gray-400">Data Plan</span>
-                <span className="font-medium text-gray-900 dark:text-white">
+              <div className="flex justify-between py-2 min-w-0">
+                <span className="text-gray-600 dark:text-gray-400 flex-shrink-0 mr-2">Data Plan</span>
+                <span className="font-medium text-gray-900 dark:text-white truncate text-right">
                   {selectedPlan?.description}
                 </span>
               </div>
               
-              <div className="flex justify-between py-2">
+              <div className="flex justify-between py-2 min-w-0">
                 <span className="text-gray-600 dark:text-gray-400">Amount</span>
                 <div className="flex flex-col items-end">
                   {selectedPlan?.show_discount_badge && selectedPlan?.discount_percentage > 0 && (
