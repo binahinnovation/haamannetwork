@@ -135,6 +135,37 @@ class ServiceAPI {
         console.error('Database error updating failed transaction:', updateError);
       }
 
+      // Refund the user since the API call failed synchronously
+      try {
+        const { error: refundError } = await supabase.rpc('process_secure_refund', {
+          p_user_id: userId,
+          p_amount: data.amount,
+          p_original_transaction_id: dbTransaction.id,
+          p_refund_reason: 'API transaction failed synchronously',
+          p_refund_details: { error: error.message }
+        });
+        
+        if (refundError) {
+          console.error('Failed to process refund for failed transaction:', refundError);
+        } else {
+          // Record the refund in transactions table
+          await supabase.from('transactions').insert([{
+            user_id: userId,
+            type: 'refund',
+            amount: data.amount,
+            status: 'success',
+            reference: `REF-${dbTransaction.reference}`,
+            details: {
+              original_transaction: dbTransaction.id,
+              reason: 'API Transaction Failed',
+              error: error.message
+            }
+          }]);
+        }
+      } catch (refundCatchError) {
+        console.error('Error executing refund:', refundCatchError);
+      }
+
       // Provide user-friendly error messages based on the specific error
       if (error.message.includes('API token not configured') || 
           error.message.includes('YOUR_MASKAWA_TOKEN_HERE')) {
@@ -295,6 +326,37 @@ class ServiceAPI {
         console.error('Database error updating failed transaction:', updateError);
       }
 
+      // Refund the user since the API call failed synchronously
+      try {
+        const { error: refundError } = await supabase.rpc('process_secure_refund', {
+          p_user_id: userId,
+          p_amount: data.amount,
+          p_original_transaction_id: dbTransaction.id,
+          p_refund_reason: 'API transaction failed synchronously',
+          p_refund_details: { error: error.message }
+        });
+        
+        if (refundError) {
+          console.error('Failed to process refund for failed transaction:', refundError);
+        } else {
+          // Record the refund in transactions table
+          await supabase.from('transactions').insert([{
+            user_id: userId,
+            type: 'refund',
+            amount: data.amount,
+            status: 'success',
+            reference: `REF-${dbTransaction.reference}`,
+            details: {
+              original_transaction: dbTransaction.id,
+              reason: 'API Transaction Failed',
+              error: error.message
+            }
+          }]);
+        }
+      } catch (refundCatchError) {
+        console.error('Error executing refund:', refundCatchError);
+      }
+
       // Provide user-friendly error messages based on the specific error
       if (error.message.includes('API token not configured') || 
           error.message.includes('YOUR_MASKAWA_TOKEN_HERE')) {
@@ -414,6 +476,37 @@ class ServiceAPI {
 
       if (updateError) {
         console.error('Database error updating failed transaction:', updateError);
+      }
+
+      // Refund the user since the API call failed synchronously
+      try {
+        const { error: refundError } = await supabase.rpc('process_secure_refund', {
+          p_user_id: userId,
+          p_amount: data.amount,
+          p_original_transaction_id: dbTransaction.id,
+          p_refund_reason: 'API transaction failed synchronously',
+          p_refund_details: { error: error instanceof Error ? error.message : 'Unknown error' }
+        });
+        
+        if (refundError) {
+          console.error('Failed to process refund for failed transaction:', refundError);
+        } else {
+          // Record the refund in transactions table
+          await supabase.from('transactions').insert([{
+            user_id: userId,
+            type: 'refund',
+            amount: data.amount,
+            status: 'success',
+            reference: `REF-${dbTransaction.reference}`,
+            details: {
+              original_transaction: dbTransaction.id,
+              reason: 'API Transaction Failed',
+              error: error instanceof Error ? error.message : 'Unknown error'
+            }
+          }]);
+        }
+      } catch (refundCatchError) {
+        console.error('Error executing refund:', refundCatchError);
       }
 
       // Provide user-friendly error messages based on the specific error
